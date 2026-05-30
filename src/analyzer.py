@@ -130,10 +130,12 @@ def ai_fde_analyze(repo: ScoredRepo) -> FDEAnalysis:
         )
 
 
-def generate_content(repo: ScoredRepo, template_name: str) -> str:
+def generate_content(repo: ScoredRepo, template_name: str, ctx: dict | None = None) -> str:
     """Load a template, format it with repo data, and generate content via LLM.
 
-    Template files should use $variable_name placeholders matching ScoredRepo fields.
+    Template files should use $variable_name placeholders matching ScoredRepo fields
+    and context dict keys.  The system prompt includes repo identity anchors
+    (confirmed features, risk boundaries) to prevent cross-project hallucination.
     """
     from .content_pack import CONTENT_PACK_TEMPLATE_MAP
 
@@ -147,22 +149,30 @@ def generate_content(repo: ScoredRepo, template_name: str) -> str:
 
     template_content = template_path.read_text(encoding="utf-8")
 
-    # Build template variables from repo fields
+    # Build template variables from repo + context
     template_vars = {
         "full_name": repo.full_name,
         "name": repo.name,
-        "description": repo.description,
+        "description": repo.description or "",
         "url": repo.url,
-        "language": repo.language,
+        "language": repo.language or "",
         "stars": str(repo.stars),
         "forks": str(repo.forks),
-        "updated_at": repo.updated_at,
-        "topics": ", ".join(repo.topics),
-        "license": repo.license,
+        "updated_at": repo.updated_at or "",
+        "topics": ", ".join(repo.topics) if repo.topics else "",
+        "license": repo.license or "",
         "readme": (repo.readme or "")[:3000],
         "contributors_count": str(repo.contributors_count),
         "score": str(repo.score),
     }
+
+    # Merge context dict variables if provided
+    if ctx:
+        for key, value in ctx.items():
+            if isinstance(value, (str, int, float)):
+                template_vars[key] = str(value)
+            elif isinstance(value, list):
+                template_vars[key] = "\n".join(f"- {item}" for item in value)
 
     # Use string.Template for safe substitution
     try:
@@ -170,13 +180,129 @@ def generate_content(repo: ScoredRepo, template_name: str) -> str:
     except Exception:
         user_prompt = template_content
 
-    system_prompt = (
-        "你是一个专业的内容创作者，擅长将技术项目转化为适合不同平台的优质内容。"
-        "请严格按照模板要求输出内容，不要自行添加额外章节。"
-    )
+    # Build system prompt with repo identity anchors
+    system_prompt = _build_system_prompt(repo, ctx or {})
 
     try:
         return _call_llm(system_prompt, user_prompt)
     except Exception as e:
         logger.warning("Content generation failed for %s/%s: %s", repo.full_name, template_name, e)
         return ""
+
+
+def _build_system_prompt(repo: ScoredRepo, ctx: dict) -> str:
+    """Build a system prompt that anchors the LLM to THIS repo's identity.
+
+    Includes confirmed features, explicit non-features, and risk boundaries
+    so the LLM does not hallucinate capabilities from other projects.
+    """
+    confirmed = ctx.get("confirmed_features") or _derive_confirmed_features(repo)
+    unsupported = ctx.get("unsupported_features") or _derive_unsupported_features(repo)
+    boundaries = ctx.get("risk_boundaries") or _derive_risk_boundaries(repo)
+
+    parts = [
+        "你是「09」，一个专注于 AI-FDE（功能创新/差异化/生态价值）学习的技术博主。",
+        "你正在从零到一学习 AI 领域，用拆解开源项目的方式记录成长。",
+        "",
+        "你的内容风格：",
+        "- 不写软文，不写百科介绍，不写工具广告",
+        "- 用\"我今天拆了一个项目\"的学习视角",
+        "- 技术判断要能翻译成老板听得懂的业务语言",
+        "- 对风险边界诚实，不夸大，不回避",
+        "",
+        "=== 当前项目身份锚定（必须严格遵守） ===",
+        f"项目：{repo.full_name}",
+        f"一句话描述：{repo.description}",
+        "",
+        "【确认的真实功能 — 只能围绕这些写】：",
+    ]
+    for f in confirmed:
+        parts.append(f"  - {f}")
+
+    parts.append("")
+    parts.append("【明确不属于本项目的概念 — 禁止写入】：")
+    for f in unsupported:
+        parts.append(f"  - {f}")
+
+    parts.append("")
+    parts.append("【风险与法律边界 — 必须遵守】：")
+    for b in boundaries:
+        parts.append(f"  - {b}")
+
+    parts.append("")
+    parts.append("=== 锚定结束 ===")
+    parts.append("")
+    parts.append("输出要求：严格按用户模板的结构和语气输出。不要引入不属于当前项目的技术概念。")
+
+    return "\n".join(parts)
+
+
+def _derive_confirmed_features(repo: ScoredRepo) -> list[str]:
+    """Derive confirmed features from repo metadata (fallback when ctx doesn't provide them)."""
+    topics = [t.lower() for t in (repo.topics or [])]
+    desc = (repo.description or "").lower()
+    readme = (repo.readme or "").lower()
+
+    features = []
+    if any(k in topics or k in desc for k in ("scrap", "crawl", "web-data", "data-extract")):
+        features.append("网页抓取/爬取（scrape/crawl）")
+    if any(k in topics or k in desc for k in ("search",)):
+        features.append("网页搜索（web search）")
+    if any(k in topics or k in desc for k in ("markdown", "html-to-markdown")):
+        features.append("HTML → Markdown / 结构化数据转换")
+    if any(k in topics or k in desc or k in readme for k in ("llm", "ai-agent", "ai-search")):
+        features.append("面向 LLM / AI Agent 的数据供给")
+    if any(k in topics for k in ("mcp",)):
+        features.append("MCP (Model Context Protocol) 集成")
+    if any(k in topics or k in desc for k in ("api",)):
+        features.append("API-first 设计，支持多语言 SDK")
+    if any(k in readme for k in ("docker", "self-host", "self host")):
+        features.append("支持 Docker 自托管或云 API")
+
+    if not features:
+        features.append(f"基于 README 描述的核心功能：{repo.description}")
+
+    return features
+
+
+def _derive_unsupported_features(repo: ScoredRepo) -> list[str]:
+    """Derive features explicitly NOT belonging to this repo type."""
+    topics = [t.lower() for t in (repo.topics or [])]
+
+    unsupported = []
+    # If it's a scraping/crawling tool, it is NOT a knowledge base / RAG platform
+    if any(k in topics for k in ("scrap", "crawl", "web-data")):
+        unsupported.extend([
+            "知识库 / RAG 平台 / 向量数据库（不是 Milvus、Chroma、Pinecone）",
+            "LLM 推理 / 模型部署 / ChatBot 框架",
+            "中文分词 / 中文语义理解专用工具",
+            "LangChain / LlamaIndex 等 AI 编排框架",
+            "知识图谱构建 / 实体抽取引擎",
+        ])
+
+    return unsupported or [
+        "本项目的功能范围以 README 和 Topics 为准，不要引入未提及的技术概念",
+    ]
+
+
+def _derive_risk_boundaries(repo: ScoredRepo) -> list[str]:
+    """Derive risk boundaries based on repo characteristics."""
+    topics = [t.lower() for t in (repo.topics or [])]
+    license_name = (repo.license or "").lower()
+
+    boundaries = ["使用前应阅读并遵守目标网站的 robots.txt 和服务条款"]
+
+    if any(k in topics for k in ("scrap", "crawl")):
+        boundaries.extend([
+            "不是万能爬虫，不是绕过工具——需尊重目标网站的访问限制",
+            "大规模抓取可能涉及版权、隐私、数据合规问题",
+            "禁止用于抓取登录/付费墙后内容（除非有合法授权）",
+        ])
+
+    if "agpl" in license_name or "gpl" in license_name:
+        boundaries.append(f"{repo.license} 许可证有 Copyleft 限制，商用需评估")
+
+    if not license_name:
+        boundaries.append("未明确许可证，商用前需确认版权归属")
+
+    return boundaries

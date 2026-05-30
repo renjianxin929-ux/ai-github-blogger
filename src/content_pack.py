@@ -84,7 +84,22 @@ def _build_repo_context(repo: ScoredRepo) -> dict:
     readme = repo.readme or ""
     readme_excerpt = readme[:1500]
 
+    # Derive repo identity anchors for LLM prompt grounding
+    from .analyzer import (
+        _derive_confirmed_features,
+        _derive_unsupported_features,
+        _derive_risk_boundaries,
+    )
+    confirmed_features = _derive_confirmed_features(repo)
+    unsupported_features = _derive_unsupported_features(repo)
+    risk_boundaries = _derive_risk_boundaries(repo)
+
     return {
+        # ── Repo identity anchors (prevents hallucination) ──
+        "confirmed_features": confirmed_features,
+        "unsupported_features": unsupported_features,
+        "risk_boundaries": risk_boundaries,
+        # ── Fields ──
         "full_name": repo.full_name,
         "name": repo.name,
         "description": repo.description or "暂无描述",
@@ -868,7 +883,7 @@ def _try_generate_file(
             content = ""
             if llm_available:
                 from .analyzer import generate_content as llm_generate
-                content = llm_generate(scored, file_name)
+                content = llm_generate(scored, file_name, ctx=ctx)
                 if not content or not content.strip():
                     gen_func = _get_generator(file_name)
                     content = gen_func(ctx) if gen_func else f"# {file_name}\n\n[TODO: LLM生成空内容，需手动补充]\n"
@@ -950,10 +965,29 @@ def generate_content_pack(
     mode_label = "LLM" if llm_available else "No-LLM fallback"
     logger.info("Content pack mode: %s (retries=%d, timeout=%ds)", mode_label, max_retries, timeout_seconds)
 
-    # 6. Generate content with retry + timeout per file
+    # 6. Generate content with retry + reviewer pipeline per file
     generated_types = []
     degraded_files = []
     failed_files = []
+    reviewer_regenerated: dict[str, int] = {}  # file_name → regeneration attempts
+
+    # Files that get full reviewer scrutiny (long-form content)
+    REVIEWER_CONTENT_FILES = {
+        "01_ai_fde_deep_analysis", "02_xiaohongshu", "05_wechat_article", "07_geo_angle",
+    }
+    # Files that get light reviewer (exaggerated claims only, no disclaimer requirement)
+    REVIEWER_LIGHT_FILES = {
+        "03_douyin_video", "04_videohao_script",
+    }
+
+    # Only run reviewer pipeline when LLM is available
+    _reviewer_available = False
+    if llm_available:
+        try:
+            from . import reviewer  # noqa: F811
+            _reviewer_available = True
+        except ImportError:
+            logger.warning("Reviewer module not available, skipping post-generation checks")
 
     for file_name in CONTENT_FILES_V2:
         try:
@@ -961,6 +995,48 @@ def generate_content_pack(
                 file_name, scored, ctx, llm_available,
                 max_retries=max_retries,
             )
+
+            # ── Reviewer pipeline (LLM mode, content files only) ──
+            if llm_available and _reviewer_available and not is_degraded:
+                is_content_file = file_name in REVIEWER_CONTENT_FILES
+                is_light_file = file_name in REVIEWER_LIGHT_FILES
+
+                if is_content_file or is_light_file:
+                    is_geo = "geo" in file_name
+                    outcome = reviewer.run_reviewer_pipeline(
+                        file_name, content, repo_full_name, ctx=ctx,
+                        geo_boundary=is_geo,
+                        strict_mode=is_content_file,
+                    )
+
+                    if outcome.needs_regeneration:
+                        logger.warning(
+                            "Reviewer: %s core checks failed (%s), regenerating...",
+                            file_name, ", ".join(outcome.core_checks_failed),
+                        )
+                        # Regenerate once
+                        reviewer_regenerated[file_name] = 1
+                        content2, degraded2 = _try_generate_file(
+                            file_name, scored, ctx, llm_available,
+                            max_retries=1,
+                        )
+                        if not degraded2:
+                            outcome2 = reviewer.run_reviewer_pipeline(
+                                file_name, content2, repo_full_name, ctx=ctx,
+                                geo_boundary=is_geo, strict_mode=is_content_file,
+                            )
+                            if outcome2.passed:
+                                content = content2
+                                logger.info("Reviewer: %s passed on regeneration", file_name)
+                            else:
+                                logger.warning(
+                                    "Reviewer: %s still failing after regeneration — %s",
+                                    file_name, ", ".join(outcome2.core_checks_failed),
+                                )
+                                is_degraded = True
+                        else:
+                            is_degraded = True
+
             filepath = pack_dir / f"{file_name}.md"
             filepath.write_text(content, encoding="utf-8")
 
@@ -974,18 +1050,38 @@ def generate_content_pack(
             logger.error("Failed %s for %s: %s", file_name, repo_full_name, e)
             failed_files.append(file_name)
 
-    # 7. Write status manifest
+    # 7. Run comprehensive quality review and write 10_quality_check.md
+    quality_report = None
+    requires_manual_review = False
+    if llm_available and _reviewer_available:
+        try:
+            quality_report = reviewer.quality_review(pack_dir, repo_full_name, ctx=ctx)
+            reviewer.write_quality_report(pack_dir, quality_report)
+            logger.info(
+                "Quality review: score=%d, recommendation=%s, blocking=%d",
+                quality_report.overall_score,
+                quality_report.publish_recommendation,
+                len(quality_report.blocking_issues),
+            )
+            if quality_report.publish_recommendation == "no":
+                requires_manual_review = True
+        except Exception as e:
+            logger.warning("Quality review failed: %s", e)
+
+    # 8. Write status manifest
     status = "ok"
     if failed_files:
         status = "failed"
     elif degraded_files:
         status = "degraded"
 
-    # Phase 8: Enhanced manifest with quality metadata
+    # Phase 11: Quality status with reviewer integration
     quality_status = "ready"
     if status == "failed":
         quality_status = "degraded"
     elif status == "degraded":
+        quality_status = "needs_review"
+    elif requires_manual_review:
         quality_status = "needs_review"
 
     # Determine risk level from repo context
@@ -1000,18 +1096,10 @@ def generate_content_pack(
         elif risk_overall == "low":
             risk_level = "low"
 
-    # Determine recommended platforms from platform scores
-    recommended_platforms = []
-    try:
-        from .platform_score import score_platform_fit
-        platform_labels = {
-            "xiaohongshu": "小红书", "douyin": "抖音",
-            "videohao": "视频号", "wechat": "公众号", "geo": "外贸/GEO",
-        }
-        # We can only make a best-effort guess without a full ScoredRepo
-        recommended_platforms = ["xiaohongshu", "douyin"]  # defaults
-    except Exception:
-        recommended_platforms = ["xiaohongshu", "douyin"]
+    # Determine recommended platforms from context
+    recommended_platforms = [ctx.get("platform_best", "xiaohongshu")]
+    if quality_report:
+        recommended_platforms = [quality_report.recommended_platform]
 
     # Detect missing fields
     missing_fields = []
@@ -1039,10 +1127,14 @@ def generate_content_pack(
         # Phase 8 enhanced fields
         "llm_mode": "disabled" if not llm_available else ("enabled" if status == "ok" else "fallback"),
         "missing_fields": missing_fields,
-        "requires_manual_review": status in ("degraded", "failed") or len(degraded_files) > 0,
+        "requires_manual_review": requires_manual_review or status in ("degraded", "failed") or len(degraded_files) > 0,
         "quality_status": quality_status,
         "risk_level": risk_level,
         "recommended_platforms": recommended_platforms,
+        # Phase 11: Reviewer stats
+        "reviewer_regenerated": reviewer_regenerated,
+        "quality_review_score": quality_report.overall_score if quality_report else None,
+        "quality_review_recommendation": quality_report.publish_recommendation if quality_report else None,
     }
     manifest_path = pack_dir / "_manifest.json"
     manifest_path.write_text(
@@ -1050,7 +1142,7 @@ def generate_content_pack(
         encoding="utf-8",
     )
 
-    # 8. Mark as generated
+    # 9. Mark as generated
     mark_as_generated(repo_full_name, generated_types)
 
     return pack_dir, status
