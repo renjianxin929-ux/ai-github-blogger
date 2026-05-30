@@ -461,14 +461,30 @@ def cmd_doctor() -> int:
     except Exception as e:
         grade_warn("data/cache writable", str(e))
 
-    # 8. templates completeness
+    # 8. templates completeness (including content pack template map)
     templates_dir = project_root / "templates"
     expected_templates = [
         "ai_fde_analysis.md", "deep_analysis.md", "xiaohongshu.md",
         "video_script.md", "douyin.md", "wechat_article.md",
         "storyboard.md", "risk_review.md", "quality_check.md", "scorer_rules.md",
+        "00_repo_snapshot.md", "07_geo_angle.md", "08_enterprise_pitch.md",
     ]
     if templates_dir.exists():
+        # Verify content pack template map coverage
+        try:
+            from .content_pack import CONTENT_PACK_TEMPLATE_MAP, CONTENT_FILES_V2
+            cp_missing = []
+            for out_name in CONTENT_FILES_V2:
+                tmpl_name = CONTENT_PACK_TEMPLATE_MAP.get(out_name, out_name)
+                tmpl_path = templates_dir / f"{tmpl_name}.md"
+                if not tmpl_path.exists():
+                    cp_missing.append(f"{out_name}→{tmpl_name}.md")
+            if cp_missing:
+                grade_warn("content pack templates", f"missing: {', '.join(cp_missing)}")
+            else:
+                grade_pass("content pack templates", f"all {len(CONTENT_FILES_V2)} files mapped")
+        except Exception:
+            pass
         missing = [t for t in expected_templates if not (templates_dir / t).exists()]
         if missing:
             grade_warn("templates/ completeness", f"missing: {', '.join(missing)}")

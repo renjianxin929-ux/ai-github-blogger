@@ -43,6 +43,21 @@ CONTENT_FILES_V2 = [
     "10_quality_check",
 ]
 
+# Map every content pack output filename → template filename (without .md extension)
+CONTENT_PACK_TEMPLATE_MAP = {
+    "00_repo_snapshot": "00_repo_snapshot",
+    "01_ai_fde_deep_analysis": "ai_fde_analysis",
+    "02_xiaohongshu": "xiaohongshu",
+    "03_douyin_video": "douyin",
+    "04_videohao_script": "video_script",
+    "05_wechat_article": "wechat_article",
+    "06_storyboard": "storyboard",
+    "07_geo_angle": "07_geo_angle",
+    "08_enterprise_pitch": "08_enterprise_pitch",
+    "09_risk_review": "risk_review",
+    "10_quality_check": "quality_check",
+}
+
 
 def _has_llm() -> bool:
     """Check if LLM API key is configured."""
@@ -826,7 +841,27 @@ def _try_generate_file(
 
     Returns (content, is_degraded). On total failure, content is an error
     placeholder with source_status=degraded marker.
+
+    Missing templates are detected early and logged specifically.
     """
+    from pathlib import Path as _Path
+    _templates_dir = _Path(__file__).resolve().parent.parent / "templates"
+    actual_template = CONTENT_PACK_TEMPLATE_MAP.get(file_name, file_name)
+    template_path = _templates_dir / f"{actual_template}.md"
+    template_missing = not template_path.exists()
+
+    if template_missing and llm_available:
+        # Cannot generate via LLM without template — skip retries
+        from datetime import datetime as _dt
+        degraded_content = (
+            f"# {file_name}\n\n"
+            f"> **source_status: degraded — missing_template**\n"
+            f"> 模板文件 `templates/{actual_template}.md` 不存在，无法生成\n"
+            f"> 生成时间: {_dt.now().strftime('%Y-%m-%d %H:%M')}\n\n"
+            f"[TODO: 创建 templates/{actual_template}.md 模板文件]\n"
+        )
+        return degraded_content, True
+
     last_error = None
     for attempt in range(max_retries):
         try:

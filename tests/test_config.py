@@ -111,8 +111,14 @@ class TestLLMConfig:
         assert cfg["api_key"] == "sk-test-key"
         assert cfg["model"] == "test-model"
 
-    def test_get_llm_config_raises_when_missing_key(self):
+    def test_get_llm_config_raises_when_missing_key(self, monkeypatch):
         """get_llm_config should raise when LLM_API_KEY is missing."""
+        # Set env vars to empty so load_dotenv (default override=False)
+        # won't overwrite them with real .env values on reload.
+        monkeypatch.setenv("LLM_API_KEY", "")
+        monkeypatch.setenv("LLM_API_BASE", "")
+        monkeypatch.setenv("LLM_MODEL", "")
+
         import importlib
         import src.config
 

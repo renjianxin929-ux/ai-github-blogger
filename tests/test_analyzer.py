@@ -159,7 +159,7 @@ class TestGenerateContent:
     @mock.patch("pathlib.Path.read_text", side_effect=FileNotFoundError)
     @mock.patch("src.analyzer.get_llm_config")
     def test_generate_content_handles_missing_template(self, mock_config, mock_read):
-        """Should raise FileNotFoundError when template doesn't exist."""
+        """Should return empty string when template doesn't exist (graceful degrade)."""
         from src.analyzer import generate_content
 
         mock_config.return_value = {
@@ -169,8 +169,8 @@ class TestGenerateContent:
         }
 
         repo = _make_scored_repo()
-        with pytest.raises(FileNotFoundError):
-            generate_content(repo, "nonexistent_template")
+        result = generate_content(repo, "nonexistent_template")
+        assert result == ""
 
     @mock.patch("src.analyzer.requests.post")
     @mock.patch("src.analyzer.get_llm_config")

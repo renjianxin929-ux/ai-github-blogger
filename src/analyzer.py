@@ -135,7 +135,16 @@ def generate_content(repo: ScoredRepo, template_name: str) -> str:
 
     Template files should use $variable_name placeholders matching ScoredRepo fields.
     """
-    template_path = TEMPLATES_DIR / f"{template_name}.md"
+    from .content_pack import CONTENT_PACK_TEMPLATE_MAP
+
+    # Resolve output filename → actual template filename
+    actual_template = CONTENT_PACK_TEMPLATE_MAP.get(template_name, template_name)
+    template_path = TEMPLATES_DIR / f"{actual_template}.md"
+
+    if not template_path.exists():
+        logger.warning("Missing template for %s: %s not found", template_name, template_path.name)
+        return ""
+
     template_content = template_path.read_text(encoding="utf-8")
 
     # Build template variables from repo fields
