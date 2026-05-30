@@ -1,0 +1,19 @@
+# 敏感配置
+.env
+.env.*
+!.env.example
+
+# 缓存与生成输出（可丢弃）
+data/cache/
+data/reports/
+data/content_packs/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

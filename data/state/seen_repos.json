@@ -1,0 +1,317 @@
+{
+  "langgenius/dify": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 9
+  },
+  "langchain-ai/langchain": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 8
+  },
+  "Shubhamsaboo/awesome-llm-apps": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 8
+  },
+  "infiniflow/ragflow": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 4
+  },
+  "n8n-io/n8n": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 10
+  },
+  "open-webui/open-webui": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 8
+  },
+  "NousResearch/hermes-agent": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 8
+  },
+  "Snailclimb/JavaGuide": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 9
+  },
+  "f/prompts.chat": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 7
+  },
+  "browser-use/browser-use": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-29T11:49:03.046600+00:00",
+    "times_recommended": 6
+  },
+  "Significant-Gravitas/AutoGPT": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 10
+  },
+  "punkpeye/awesome-mcp-servers": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 6
+  },
+  "langflow-ai/langflow": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 9
+  },
+  "x1xhlol/system-prompts-and-models-of-ai-tools": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-29T11:38:53.204651+00:00",
+    "times_recommended": 5
+  },
+  "firecrawl/firecrawl": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-29T13:16:10.709275+00:00",
+    "times_recommended": 7
+  },
+  "microsoft/generative-ai-for-beginners": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-29T13:16:10.709275+00:00",
+    "times_recommended": 4
+  },
+  "msitarzewski/agency-agents": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 8
+  },
+  "google-gemini/gemini-cli": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 8
+  },
+  "rasbt/LLMs-from-scratch": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 3
+  },
+  "ChatGPTNextWeb/NextChat": {
+    "first_seen": "2026-05-29T10:31:27.079340+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 6
+  },
+  "thedotmack/claude-mem": {
+    "first_seen": "2026-05-29T10:55:17.412119+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 4
+  },
+  "openclaw/openclaw": {
+    "first_seen": "2026-05-29T10:55:17.412119+00:00",
+    "last_seen": "2026-05-29T13:16:10.709275+00:00",
+    "times_recommended": 6
+  },
+  "Comfy-Org/ComfyUI": {
+    "first_seen": "2026-05-29T10:55:17.412119+00:00",
+    "last_seen": "2026-05-29T13:16:10.709275+00:00",
+    "times_recommended": 5
+  },
+  "github/spec-kit": {
+    "first_seen": "2026-05-29T10:55:17.412119+00:00",
+    "last_seen": "2026-05-29T13:16:10.709275+00:00",
+    "times_recommended": 4
+  },
+  "nextlevelbuilder/ui-ux-pro-max-skill": {
+    "first_seen": "2026-05-29T10:55:17.412119+00:00",
+    "last_seen": "2026-05-29T13:16:10.709275+00:00",
+    "times_recommended": 4
+  },
+  "fighting41love/funNLP": {
+    "first_seen": "2026-05-29T10:55:17.412119+00:00",
+    "last_seen": "2026-05-29T13:16:10.709275+00:00",
+    "times_recommended": 2
+  },
+  "AUTOMATIC1111/stable-diffusion-webui": {
+    "first_seen": "2026-05-29T10:55:17.412119+00:00",
+    "last_seen": "2026-05-29T13:16:10.709275+00:00",
+    "times_recommended": 5
+  },
+  "supabase/supabase": {
+    "first_seen": "2026-05-29T10:55:17.412119+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 3
+  },
+  "karpathy/autoresearch": {
+    "first_seen": "2026-05-29T10:55:17.412119+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 4
+  },
+  "hacksider/Deep-Live-Cam": {
+    "first_seen": "2026-05-29T11:25:10.705515+00:00",
+    "last_seen": "2026-05-29T11:25:10.705515+00:00",
+    "times_recommended": 1
+  },
+  "assafelovic/gpt-researcher": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "simstudioai/sim": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "wshobson/agents": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "khoj-ai/khoj": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "ComposioHQ/awesome-claude-skills": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "Budibase/budibase": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "huginn/huginn": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "vercel-labs/agent-browser": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "Yeachan-Heo/oh-my-claudecode": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "harry0703/MoneyPrinterTurbo": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "apache/airflow": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "lightpanda-io/browser": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "hashicorp/vagrant": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "appsmithorg/appsmith": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "ansible/ansible": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "FujiwaraChoki/MoneyPrinterV2": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "acmesh-official/acme.sh": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "usebruno/bruno": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "Anuken/Mindustry": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "home-assistant/core": {
+    "first_seen": "2026-05-29T13:55:54.440543+00:00",
+    "last_seen": "2026-05-29T13:55:54.440543+00:00",
+    "times_recommended": 1
+  },
+  "geopandas/geopandas": {
+    "first_seen": "2026-05-29T14:34:01.744327+00:00",
+    "last_seen": "2026-05-29T14:34:01.744327+00:00",
+    "times_recommended": 1
+  },
+  "algolia/places": {
+    "first_seen": "2026-05-29T14:34:01.744327+00:00",
+    "last_seen": "2026-05-29T14:34:01.744327+00:00",
+    "times_recommended": 1
+  },
+  "sacridini/Awesome-Geospatial": {
+    "first_seen": "2026-05-29T14:34:01.744327+00:00",
+    "last_seen": "2026-05-29T14:34:01.744327+00:00",
+    "times_recommended": 1
+  },
+  "sshuair/awesome-gis": {
+    "first_seen": "2026-05-29T14:34:01.744327+00:00",
+    "last_seen": "2026-05-29T14:34:01.744327+00:00",
+    "times_recommended": 1
+  },
+  "Loyalsoldier/geoip": {
+    "first_seen": "2026-05-29T14:34:01.744327+00:00",
+    "last_seen": "2026-05-29T14:34:01.744327+00:00",
+    "times_recommended": 1
+  },
+  "opengeos/geoai": {
+    "first_seen": "2026-05-29T14:34:01.744327+00:00",
+    "last_seen": "2026-05-29T14:34:01.744327+00:00",
+    "times_recommended": 1
+  },
+  "opengeos/segment-geospatial": {
+    "first_seen": "2026-05-29T14:34:01.744327+00:00",
+    "last_seen": "2026-05-29T14:34:01.744327+00:00",
+    "times_recommended": 1
+  },
+  "alexreisner/geocoder": {
+    "first_seen": "2026-05-29T14:34:01.744327+00:00",
+    "last_seen": "2026-05-29T14:34:01.744327+00:00",
+    "times_recommended": 1
+  },
+  "sensepost/reGeorg": {
+    "first_seen": "2026-05-29T14:34:01.744327+00:00",
+    "last_seen": "2026-05-29T14:34:01.744327+00:00",
+    "times_recommended": 1
+  },
+  "tidwall/tile38": {
+    "first_seen": "2026-05-29T14:34:01.744327+00:00",
+    "last_seen": "2026-05-29T14:34:01.744327+00:00",
+    "times_recommended": 1
+  },
+  "openvenues/libpostal": {
+    "first_seen": "2026-05-29T14:34:01.744327+00:00",
+    "last_seen": "2026-05-29T14:34:01.744327+00:00",
+    "times_recommended": 1
+  },
+  "zcreativelabs/react-simple-maps": {
+    "first_seen": "2026-05-29T14:34:01.744327+00:00",
+    "last_seen": "2026-05-29T14:34:01.744327+00:00",
+    "times_recommended": 1
+  },
+  "affaan-m/ECC": {
+    "first_seen": "2026-05-30T01:15:35.772858+00:00",
+    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "times_recommended": 1
+  }
+}

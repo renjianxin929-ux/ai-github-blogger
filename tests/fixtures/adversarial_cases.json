@@ -1,0 +1,448 @@
+{
+  "description": "对抗样本集 — 20 cases designed to trip up the scorer. Tests edge cases, false positives, and boundary conditions.",
+  "version": "1.0.0",
+  "created": "2026-05-29",
+  "cases": [
+    {
+      "full_name": "fake-ai/not-really-ai-project",
+      "name": "super-ai-toolkit",
+      "description": "A simple HTML template for restaurant websites. Uses AI-generated color palettes for food images.",
+      "topics": ["ai", "html", "template", "restaurant", "web"],
+      "stars": 500, "forks": 50, "language": "HTML", "license": "MIT",
+      "contributors_count": 1,
+      "readme": "## Restaurant Template\n\nA beautiful HTML template for restaurants.\n\n### AI Features\nWe used AI to generate the color palette. That's it.\n\n### Installation\nJust open index.html in your browser.",
+      "expected": {
+        "pool": "review",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": { "min": 0, "max": 55 },
+        "test": "名字有AI但内容不是AI — WEAK AI信号进入review"
+      }
+    },
+    {
+      "full_name": "some-dev/random-utils",
+      "name": "random-utils",
+      "description": "Random utility functions for everyday coding. Contains a text file about AI trends. Also some bash scripts.",
+      "topics": ["utilities", "python", "scripts", "tools"],
+      "stars": 120, "forks": 15, "language": "Python", "license": "MIT",
+      "contributors_count": 1,
+      "readme": "## Random Utils\n\nCollection of utility scripts.\n\n### Contents\n- file-organizer.sh\n- disk-cleanup.py\n- ai-news-2024.txt (a text file about AI trends)\n- backup.sh",
+      "expected": {
+        "pool": "review",
+        "content_type": "unclear",
+        "risk_overall": "low",
+        "repo_selection_score": { "min": 0, "max": 55 },
+        "test": "README偶然出现AI但主题不是AI — 进入review（非AI内容）"
+      }
+    },
+    {
+      "full_name": "someone/awesome-random-stuff",
+      "name": "awesome-random-stuff",
+      "description": "Awesome list of random developer tools, libraries, and resources across all languages and frameworks.",
+      "topics": ["awesome-list", "collection", "resources", "tools"],
+      "stars": 25000, "forks": 3000, "language": "Markdown", "license": "",
+      "contributors_count": 20,
+      "readme": "## Awesome Random Stuff\n\nA curated list of awesome developer resources.\n\n### Categories\n- Frontend\n- Backend\n- DevOps\n- AI/ML\n- Mobile\n\n### How to Contribute\nSubmit a PR.",
+      "expected": {
+        "pool": "resource",
+        "content_type": "awesome_list",
+        "risk_overall": "medium",
+        "repo_selection_score": { "min": 30, "max": 100 },
+        "test": "awesome list — MUST be resource, NEVER top5"
+      }
+    },
+    {
+      "full_name": "tutorial-guy/learn-python-in-30-days",
+      "name": "learn-python-in-30-days",
+      "description": "Complete Python tutorial from zero to hero. 30-day learning path with exercises and projects.",
+      "topics": ["python", "tutorial", "beginner", "course", "learning"],
+      "stars": 15000, "forks": 2000, "language": "Python", "license": "MIT",
+      "contributors_count": 3,
+      "readme": "## Learn Python in 30 Days\n\nComplete Python tutorial.\n\n### Day 1-5: Basics\n### Day 6-10: Functions\n### Day 11-15: OOP\n### Day 16-20: Web\n### Day 21-25: AI/ML Basics\n### Day 26-30: Projects\n\n### Note\nThis is a tutorial, not a runnable project.",
+      "expected": {
+        "pool": "resource",
+        "content_type": "tutorial_guide",
+        "risk_overall": "low",
+        "repo_selection_score": { "min": 30, "max": 100 },
+        "test": "教程类 — 应进入resource，即使提到AI/ML"
+      }
+    },
+    {
+      "full_name": "interview-prep/Java-Interview-Advanced",
+      "name": "Java-Interview-Advanced",
+      "description": "Java核心面试知识体系，包含多线程、JVM、Spring、MySQL等面试题和答案。",
+      "topics": ["java", "interview", "面试", "guide", "tutorial"],
+      "stars": 100000, "forks": 25000, "language": "Java", "license": "",
+      "contributors_count": 50,
+      "readme": "## Java Interview Guide\n\nJava面试核心知识体系。\n\n### 目录\n- Java基础\n- 多线程\n- JVM\n- Spring\n- MySQL\n\n### 如何使用\n按需查阅，面试前准备。",
+      "expected": {
+        "pool": "resource",
+        "content_type": "tutorial_guide",
+        "risk_overall": "medium",
+        "repo_selection_score": { "min": 30, "max": 100 },
+        "test": "面试题集 — 应进入resource，不应进入top5（类似JavaGuide）"
+      }
+    },
+    {
+      "full_name": "deepfake-tools/deep-live-portrait",
+      "name": "deep-live-portrait",
+      "description": "Real-time face swap for live streaming. Deepfake your webcam with AI. Face replacement technology.",
+      "topics": ["deepfake", "face-swap", "webcam", "live", "ai"],
+      "stars": 35000, "forks": 5000, "language": "Python", "license": "MIT",
+      "contributors_count": 2,
+      "readme": "## Deep-Live-Portrait\n\nReal-time face swap for live streaming.\n\n### Installation\npip install -r requirements.txt\n\n### Usage\npython run.py --source face.jpg --target webcam\n\n### Demo\nSee it in action on our demo page.\n\n### Warning\nUse responsibly. Face swap without consent is illegal.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "test": "deepfake实时换脸 — 必须blocked"
+      }
+    },
+    {
+      "full_name": "social-tools/insta-auto-engage",
+      "name": "insta-auto-engage",
+      "description": "Instagram automation tool. Auto-like, auto-follow, auto-comment. Grow your account with AI-powered engagement.",
+      "topics": ["instagram", "automation", "bot", "social-media", "growth"],
+      "stars": 8000, "forks": 1500, "language": "Python", "license": "MIT",
+      "contributors_count": 3,
+      "readme": "## Insta Auto Engage\n\nAutomate your Instagram engagement.\n\n### Features\n- Auto-like posts\n- Auto-follow users\n- Auto-comment with AI\n- Schedule posts\n- Multi-account support\n\n### Warning\nViolates Instagram ToS. Use at your own risk.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "test": "browser/social 账号自动化 — 应blocked（instagram/auto-like等风险词）"
+      }
+    },
+    {
+      "full_name": "scraper-guy/web-scraper-pro",
+      "name": "web-scraper-pro",
+      "description": "Advanced web scraper with AI. Bypass Cloudflare, solve CAPTCHAs automatically. Scrape any website at scale.",
+      "topics": ["scraping", "web-scraper", "bypass", "captcha", "ai"],
+      "stars": 12000, "forks": 2000, "language": "Python", "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## Web Scraper Pro\n\nAdvanced AI-powered web scraper.\n\n### Features\n- Cloudflare bypass\n- Auto CAPTCHA solving\n- Proxy rotation\n- AI content extraction\n- Rate limit evasion\n\n### Warning\nScraping may violate website ToS.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "test": "爬虫+bypass+CAPTCHA — 必须blocked（bypass是关键风险词）"
+      }
+    },
+    {
+      "full_name": "hacktools/wifi-password-crack",
+      "name": "wifi-password-crack",
+      "description": "WiFi password cracking tool. WPA/WPA2 password recovery using dictionary and brute force attacks.",
+      "topics": ["wifi", "password", "crack", "security", "network"],
+      "stars": 5000, "forks": 1000, "language": "Python", "license": "",
+      "contributors_count": 2,
+      "readme": "## WiFi Password Cracker\n\nRecover WiFi passwords.\n\n### Features\n- WPA/WPA2 handshake capture\n- Dictionary attack\n- Brute force with GPU\n\n### Warning\nCracking others' WiFi is illegal.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "test": "密码破解 — 必须blocked"
+      }
+    },
+    {
+      "full_name": "malware-dev/stealth-keylogger",
+      "name": "stealth-keylogger",
+      "description": "Undetectable keylogger for Windows. Records keystrokes, screenshots, and sends logs via email. Stealth mode.",
+      "topics": ["keylogger", "spyware", "monitoring", "windows", "stealth"],
+      "stars": 1500, "forks": 300, "language": "C++", "license": "",
+      "contributors_count": 1,
+      "readme": "## Stealth Keylogger\n\nUndetectable Windows keylogger.\n\n### Features\n- Record all keystrokes\n- Screenshot capture\n- Email log delivery\n- Process hiding\n- Startup persistence\n\n### Warning\nKeyloggers are illegal spyware unless used on YOUR OWN devices.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "test": "恶意keylogger — 必须blocked（malware/spyware）"
+      }
+    },
+    {
+      "full_name": "old-repos/jquery",
+      "name": "jquery",
+      "description": "jQuery JavaScript Library. Fast, small, and feature-rich JavaScript library.",
+      "topics": ["javascript", "library", "dom", "frontend"],
+      "stars": 60000, "forks": 20000, "language": "JavaScript", "license": "MIT",
+      "contributors_count": 100,
+      "readme": "## jQuery\n\nFast, small, and feature-rich JavaScript library.\n\n### Installation\nnpm install jquery\n\n### Quick Start\n$(document).ready(function() { console.log('ready'); });\n\n### Documentation\nSee api.jquery.com",
+      "expected": {
+        "pool": "review",
+        "risk_overall": "low",
+        "repo_selection_score": { "min": 0, "max": 65 },
+        "test": "star很多但很老的项目，非AI — 进入review（非AI内容），非top5非evergreen"
+      }
+    },
+    {
+      "full_name": "new-guy/ai-business-automation-starter",
+      "name": "ai-business-automation-starter",
+      "description": "体量虽小但商业可讲性极强：用AI自动回复客户邮件、生成报价单、跟踪销售线索的SMB工具。适合中小外贸企业零门槛上手。",
+      "topics": ["ai", "automation", "business", "email", "crm", "sales"],
+      "stars": 280, "forks": 35, "language": "Python", "license": "MIT",
+      "contributors_count": 2,
+      "readme": "## AI Business Automation Starter\n\n体量虽小但商业可讲性极强。\n\n### 功能\n- AI自动回复客户邮件\n- 自动生成报价单\n- 销售线索跟踪\n- 多语言支持（中英文）\n\n### 安装\npip install -r requirements.txt\n\n### Demo\n在线演示: demo.example.com\n\n### 适合人群\n中小外贸企业、SOHO、跨境电商卖家",
+      "expected": {
+        "pool": "review",
+        "risk_overall": "medium",
+        "test": "低starAI项目 — 仅泛化AI关键词，WEAK信号进入review"
+      }
+    },
+    {
+      "full_name": "security-research/pentest-toolkit",
+      "name": "pentest-toolkit",
+      "description": "Professional penetration testing toolkit. For authorized security assessments and CTF competitions only.",
+      "topics": ["security", "penetration-testing", "ctf", "red-team", "ethical-hacking"],
+      "stars": 15000, "forks": 3000, "language": "Python", "license": "GPL-3.0",
+      "contributors_count": 15,
+      "readme": "## Penetration Testing Toolkit\n\nProfessional toolkit for authorized security assessments.\n\n### Features\n- Network scanning\n- Vulnerability detection\n- Exploit development\n- Report generation\n\n### Usage\nFor authorized testing and CTF only.\n\n### Ethics\nThis tool is for security professionals. Always get written authorization.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "test": "pentest工具 — 含exploit关键词，应blocked"
+      }
+    },
+    {
+      "full_name": "ai-ml-ops/mlflow",
+      "name": "mlflow",
+      "description": "Open source platform for the machine learning lifecycle. Experiment tracking, model registry, deployment.",
+      "topics": ["machine-learning", "mlops", "experiment-tracking", "model-registry", "ai"],
+      "stars": 20000, "forks": 4000, "language": "Python", "license": "Apache-2.0",
+      "contributors_count": 100,
+      "readme": "## MLflow — ML Lifecycle Platform\n\nOpen source platform for ML lifecycle.\n\n### Installation\npip install mlflow\n\n### Quick Start\nmlflow ui\n\n### Features\n- Experiment tracking\n- Model registry\n- Model serving\n\n### Enterprise\n- MLflow Tracking Server\n- Model Registry with RBAC",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "test": "ML平台框架 — 进入evergreen（大型基础设施项目）"
+      }
+    },
+    {
+      "full_name": "browser-tools/playwright-automation",
+      "name": "playwright-automation",
+      "description": "Browser automation utilities built on Playwright. Automate web testing, form filling, and data collection.",
+      "topics": ["browser", "automation", "playwright", "testing", "web"],
+      "stars": 5000, "forks": 500, "language": "JavaScript", "license": "MIT",
+      "contributors_count": 10,
+      "readme": "## Playwright Automation\n\nBrowser automation with Playwright.\n\n### Installation\nnpm install\n\n### Quick Start\nconst { chromium } = require('playwright');\n\n### Use Cases\n- Web testing\n- Form automation\n- Data collection\n\n### Note\nUse responsibly. Respect robots.txt and rate limits.",
+      "expected": {
+        "pool": "review",
+        "content_type": "runnable_project",
+        "risk_overall": "medium",
+        "test": "浏览器自动化但非AI — 非AI核心项目，应进入review而非top5"
+      }
+    },
+    {
+      "full_name": "middleware-tools/api-gateway-ai",
+      "name": "api-gateway-ai",
+      "description": "API Gateway with AI-powered routing, rate limiting, and request transformation. MCP-compatible.",
+      "topics": ["api", "gateway", "mcp", "ai", "middleware", "proxy"],
+      "stars": 3000, "forks": 300, "language": "Go", "license": "MIT",
+      "contributors_count": 8,
+      "readme": "## AI API Gateway\n\nMCP-compatible API gateway with AI routing.\n\n### Installation\ndocker-compose up -d\n\n### Features\n- AI-based routing\n- MCP protocol support\n- Rate limiting\n- Request transformation\n\n### Demo\nTry our demo at demo.example.com",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "test": "MCP工具 — 应有较高AI相关性分，能识别为可运行项目"
+      }
+    },
+    {
+      "full_name": "search-tools/searxng-ai",
+      "name": "searxng-ai",
+      "description": "AI-powered metasearch engine. Self-hostable, privacy-respecting. Great for GEO research and competitive analysis.",
+      "topics": ["search", "ai", "geo", "seo", "privacy", "metasearch"],
+      "stars": 15000, "forks": 1500, "language": "Python", "license": "AGPL-3.0",
+      "contributors_count": 30,
+      "readme": "## SearXNG AI — AI Metasearch Engine\n\nPrivacy-respecting AI metasearch.\n\n### Installation\ndocker-compose up -d\n\n### Features\n- AI-powered search\n- Self-hostable\n- No tracking\n- GEO optimization\n\n### Demo\nTry at search.example.com",
+      "expected": {
+        "pool": "review",
+        "risk_overall": "medium",
+        "test": "AI搜索工具但无具体AI技术栈信号 — 诚实地进入review，需人工判断"
+      }
+    },
+    {
+      "full_name": "workflow-tools/n8n-community-nodes",
+      "name": "n8n-community-nodes",
+      "description": "Community nodes for n8n workflow automation. Add AI, browser, and API integrations to your n8n instance.",
+      "topics": ["n8n", "workflow", "automation", "community", "plugins"],
+      "stars": 2000, "forks": 300, "language": "TypeScript", "license": "MIT",
+      "contributors_count": 20,
+      "readme": "## n8n Community Nodes\n\nCommunity-contributed nodes for n8n.\n\n### Installation\nnpm install in your n8n custom directory.\n\n### Nodes\n- AI Agent node\n- Browser automation node\n- API integration nodes",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "medium",
+        "business_value_score": { "min": 65, "max": 100 },
+        "test": "workflow+automation — 应有较高workflow_integration分"
+      }
+    },
+    {
+      "full_name": "prompt-tools/promptfoo",
+      "name": "promptfoo",
+      "description": "Test and evaluate LLM prompts. Compare models, run A/B tests, and find the best prompts systematically.",
+      "topics": ["prompt-engineering", "llm", "testing", "evaluation", "ai"],
+      "stars": 6000, "forks": 400, "language": "TypeScript", "license": "MIT",
+      "contributors_count": 10,
+      "readme": "## promptfoo — LLM Prompt Testing\n\nTest and evaluate your prompts.\n\n### Installation\nnpm install -g promptfoo\n\n### Features\n- A/B testing\n- Model comparison\n- Regression testing\n- CI/CD integration\n\n### Demo\n![demo](demo.gif)",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "business_value_score": { "min": 60, "max": 85 },
+        "test": "prompt/eval/tooling — 应有较高FDE训练价值分"
+      }
+    },
+    {
+      "full_name": "fake-startup/ai-blockchain-web3",
+      "name": "ai-blockchain-web3",
+      "description": "Revolutionary AI-powered blockchain platform for Web3. Decentralized AI agents on the blockchain. Whitepaper coming soon.",
+      "topics": ["ai", "blockchain", "web3", "crypto", "decentralized"],
+      "stars": 15000, "forks": 2000, "language": "Solidity", "license": "",
+      "contributors_count": 2,
+      "readme": "## AI Blockchain Web3 Platform\n\nRevolutionary decentralized AI on blockchain.\n\n### Vision\nCombine AI and blockchain for a decentralized future.\n\n### Status\nWhitepaper coming soon. Token sale imminent.\n\n### Note\nEarly stage project. No working code yet. Join our Discord.",
+      "expected": {
+        "pool": "review",
+        "content_type": "unclear",
+        "risk_overall": "medium",
+        "test": "hype项目+blockchain — 应有hype风险，无实际可运行内容，不应进入top5"
+      }
+    },
+    {
+      "full_name": "geo-tools/qgis",
+      "name": "QGIS",
+      "description": "QGIS is a free, open source, cross platform geographic information system.",
+      "topics": ["gis", "mapping", "geo", "geospatial", "desktop"],
+      "stars": 12000, "forks": 2500, "language": "C++", "license": "GPL-2.0",
+      "contributors_count": 200,
+      "readme": "## QGIS — Geographic Information System\n\nOpen source GIS application.\n\n### Features\n- Map creation\n- Spatial analysis\n- Geoprocessing\n- Data visualization\n\n### Installation\nDownload from qgis.org",
+      "expected": {
+        "pool": "review",
+        "risk_overall": "medium",
+        "repo_selection_score": { "min": 0, "max": 70 },
+        "test": "GEO关键词误伤地理/GIS项目 — WEAK AI进入review"
+      }
+    },
+    {
+      "full_name": "seo-tools/yoast-seo",
+      "name": "yoast-seo",
+      "description": "The #1 WordPress SEO plugin. Improve your website's search engine optimization with content analysis and technical SEO.",
+      "topics": ["wordpress", "seo", "plugin", "web", "content"],
+      "stars": 10000, "forks": 2000, "language": "PHP", "license": "GPL-3.0",
+      "contributors_count": 50,
+      "readme": "## Yoast SEO\n\nWordPress SEO plugin.\n\n### Features\n- Content analysis\n- XML sitemaps\n- Schema.org integration\n- Readability check\n\n### Installation\nInstall via WordPress plugin directory.",
+      "expected": {
+        "pool": "review",
+        "risk_overall": "medium",
+        "repo_selection_score": { "min": 0, "max": 65 },
+        "test": "SEO关键词误伤传统SEO项目 — WEAK AI进入review"
+      }
+    },
+    {
+      "full_name": "ai-image-tools/nsfw-image-generator",
+      "name": "nsfw-image-generator",
+      "description": "AI-powered image generation with NSFW capabilities. Generate realistic images using Stable Diffusion with uncensored model support.",
+      "topics": ["ai", "image-generation", "stable-diffusion", "nsfw", "uncensored"],
+      "stars": 8000, "forks": 1200, "language": "Python", "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## AI Image Generator (Uncensored)\n\nGenerate images with AI.\n\n### Features\n- Text to image\n- Uncensored model support\n- NSFW content generation\n- Batch generation\n\n### Installation\npip install -r requirements.txt\n\n### Note\nUse responsibly. Filter NSFW content when needed.",
+      "expected": {
+        "pool": "blocked",
+        "risk_overall": "low",
+        "test": "AI image高风险内容 — scorer层blocked（nsfw/uncensored关键词），risk_score不单独block"
+      }
+    },
+    {
+      "full_name": "hype-dev/ai-revolution-starter",
+      "name": "ai-revolution-starter",
+      "description": "The revolutionary AI agent platform that will change everything. Disruptive technology for the future of work.",
+      "topics": ["ai", "agent", "revolutionary"],
+      "stars": 500, "forks": 50, "language": "Python", "license": "",
+      "contributors_count": 1,
+      "readme": "## AI Revolution Starter\n\nThe future of AI agents.\n\n### Coming Soon\nWe're building the most revolutionary AI agent platform.\n\n### Discord\nJoin our Discord for early access.\n\n### Status\nEarly stage. Whitepaper coming soon.",
+      "expected": {
+        "pool": "review",
+        "content_type": "unclear",
+        "risk_overall": "medium",
+        "test": "只包装AI概念但README很空 — 应有hype风险，不应进入top5"
+      }
+    },
+    {
+      "full_name": "sdk-tools/openai-api-wrapper",
+      "name": "openai-api-wrapper",
+      "description": "A thin wrapper around the OpenAI API. Adds retry logic and response caching. Pure SDK/library with no application logic.",
+      "topics": ["openai", "api", "wrapper", "sdk", "library"],
+      "stars": 300, "forks": 50, "language": "Python", "license": "MIT",
+      "contributors_count": 1,
+      "readme": "## OpenAI API Wrapper\n\nThin wrapper around OpenAI API.\n\n### Installation\npip install openai-api-wrapper\n\n### Usage\n```python\nfrom wrapper import OpenAI\nclient = OpenAI()\nresponse = client.chat(\"Hello\")\n```\n\n### Features\n- Retry logic\n- Response caching",
+      "expected": {
+        "pool": "top5",
+        "risk_overall": "low",
+        "business_value_score": { "min": 0, "max": 80 },
+        "test": "SDK/library但缺少业务场景 — 含openai强信号，诚实进入top5"
+      }
+    },
+    {
+      "full_name": "malware-dev/credential-harvester",
+      "name": "credential-harvester",
+      "description": "Advanced credential harvesting tool for security testing. Captures login credentials from various protocols.",
+      "topics": ["security", "credential", "harvesting", "network", "penetration-testing"],
+      "stars": 3000, "forks": 600, "language": "Python", "license": "",
+      "contributors_count": 2,
+      "readme": "## Credential Harvester\n\nAdvanced credential harvesting.\n\n### Features\n- HTTP form capture\n- FTP credential sniffing\n- SMTP password extraction\n- Automated phishing templates\n\n### Warning\nFor authorized security testing only.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "test": "credential harvesting — 必须blocked（phishing/credential关键词）"
+      }
+    },
+    {
+      "full_name": "medium-star-ai/smolagents",
+      "name": "smolagents",
+      "description": "Minimal AI agent framework. Build autonomous agents that can use tools, browse the web, and execute code. Lightweight and fast.",
+      "topics": ["ai", "agent", "llm", "tool-use", "orchestration", "browser-use"],
+      "stars": 5000, "forks": 400, "language": "Python", "license": "MIT",
+      "contributors_count": 8,
+      "readme": "## Smolagents — Minimal AI Agent Framework\n\nLightweight agent framework.\n\n### Installation\npip install smolagents\n\n### Quick Start\n```python\nfrom smolagents import Agent\nagent = Agent(model=\"gpt-4\")\nagent.run(\"Research the latest AI trends\")\n```\n\n### Features\n- Multi-tool support\n- Browser automation\n- Code execution\n\n### Demo\nTry the live demo at demo.smolagents.dev",
+      "expected": {
+        "pool": "top5",
+        "content_type": "framework_tool",
+        "risk_overall": "medium",
+        "business_value_score": { "min": 70, "max": 100 },
+        "test": "中型star真AI agent框架 — framework_tool含browser-use风险提示"
+      }
+    },
+    {
+      "full_name": "old-repos/linux",
+      "name": "linux",
+      "description": "Linux kernel source tree. The heart of the Linux operating system.",
+      "topics": ["kernel", "linux", "c", "operating-system"],
+      "stars": 200000, "forks": 50000, "language": "C", "license": "GPL-2.0",
+      "contributors_count": 5000,
+      "readme": "## Linux Kernel\n\nThe Linux kernel.\n\n### Building\nmake defconfig\nmake -j$(nproc)\n\n### Documentation\nSee Documentation/ directory.",
+      "expected": {
+        "pool": "review",
+        "risk_overall": "medium",
+        "repo_selection_score": { "min": 0, "max": 60 },
+        "test": "star极高但完全非AI — 进入review（非AI内容），GPL许可证风险"
+      }
+    },
+    {
+      "full_name": "geo-seo/firecrawl",
+      "name": "firecrawl",
+      "description": "Crawl and convert any website into LLM-ready markdown. AI-powered web scraping for RAG pipelines and GEO optimization.",
+      "topics": ["ai", "crawling", "scraping", "geo", "seo", "rag", "llm"],
+      "stars": 25000, "forks": 2000, "language": "Python", "license": "MIT",
+      "contributors_count": 15,
+      "readme": "## Firecrawl — AI Web Crawler\n\nTurn websites into LLM-ready data.\n\n### Installation\nnpm install firecrawl\n\n### Features\n- AI-powered crawling\n- Markdown conversion\n- RAG pipeline integration\n- GEO data collection\n\n### Demo\nTry at firecrawl.dev",
+      "expected": {
+        "pool": "top5",
+        "risk_overall": "medium",
+        "business_value_score": { "min": 70, "max": 100 },
+        "platform_fit_ranges": { "geo_trade": { "min": 65, "max": 100 } },
+        "test": "真正的AI爬虫/GEO工具 — 应正确识别为AI top5，高商业价值"
+      }
+    }
+  ]
+}

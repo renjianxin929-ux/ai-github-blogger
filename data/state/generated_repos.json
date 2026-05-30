@@ -1,0 +1,34 @@
+{
+  "browser-use/browser-use": {
+    "generated_at": "2026-05-29T13:16:28.908316+00:00",
+    "content_types": [
+      "00_repo_snapshot",
+      "01_ai_fde_deep_analysis",
+      "02_xiaohongshu",
+      "03_douyin_video",
+      "04_videohao_script",
+      "05_wechat_article",
+      "06_storyboard",
+      "07_geo_angle",
+      "08_enterprise_pitch",
+      "09_risk_review",
+      "10_quality_check"
+    ]
+  },
+  "firecrawl/firecrawl": {
+    "generated_at": "2026-05-29T16:09:45.100296+00:00",
+    "content_types": [
+      "00_repo_snapshot",
+      "01_ai_fde_deep_analysis",
+      "02_xiaohongshu",
+      "03_douyin_video",
+      "04_videohao_script",
+      "05_wechat_article",
+      "06_storyboard",
+      "07_geo_angle",
+      "08_enterprise_pitch",
+      "09_risk_review",
+      "10_quality_check"
+    ]
+  }
+}

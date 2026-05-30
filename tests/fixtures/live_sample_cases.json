@@ -1,0 +1,209 @@
+{
+  "description": "真实样本集 — 20 cases sampled from real daily GitHub fetch results. These come from actual 2026-05-29 daily run, WITHOUT pre-written expected values.",
+  "version": "1.0.0",
+  "created": "2026-05-29",
+  "source": "python run.py daily --no-llm",
+  "note": "These are real repos from live GitHub data. No hand-crafted expectations. The benchmark should report confidence levels, not claimed accuracy.",
+  "cases": [
+    {
+      "full_name": "assafelovic/gpt-researcher",
+      "name": "gpt-researcher",
+      "description": "An autonomous agent that conducts deep research on any data using any LLM providers",
+      "topics": ["ai", "llm", "agent", "mcp", "automation", "gpt"],
+      "stars": 27378, "forks": 3683, "language": "Python", "license": "Apache-2.0",
+      "contributors_count": 5,
+      "readme": "## GPT Researcher\n\nAn autonomous agent for deep research.\n\n### Installation\npip install gpt-researcher\n\n### Features\n- Multi-source research\n- Report generation\n- Multiple LLM providers",
+      "expected": { "needs_human_review": true, "note": "High selection score in daily (92.5) — verify it truly deserves this" }
+    },
+    {
+      "full_name": "simstudioai/sim",
+      "name": "sim",
+      "description": "Build, deploy, and orchestrate AI agents. Sim is the central intelligence layer for your AI workforce.",
+      "topics": ["ai", "agent", "rag", "automation", "workflow", "chatbot", "openai", "deepseek"],
+      "stars": 28635, "forks": 3629, "language": "TypeScript", "license": "Apache-2.0",
+      "contributors_count": 5,
+      "readme": "## Sim — AI Agent Platform\n\nBuild, deploy, and orchestrate AI agents.\n\n### Installation\ndocker-compose up -d\n\n### Features\n- Agent orchestration\n- RAG support\n- Multi-model",
+      "expected": { "needs_human_review": true, "note": "Selection=85.5, business=93.0 — verify business judgment on real data" }
+    },
+    {
+      "full_name": "wshobson/agents",
+      "name": "agents",
+      "description": "Multi-harness agentic plugin marketplace for Claude Code, Codex CLI, Cursor, OpenCode, and Gemini CLI",
+      "topics": ["ai", "agent", "mcp", "automation", "workflow", "prompt", "claude", "orchestration"],
+      "stars": 36119, "forks": 3919, "language": "Python", "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## Agents — Multi-Harness Plugin Marketplace\n\nPlugin marketplace for AI coding agents.\n\n### Installation\npip install agents\n\n### Features\n- Claude Code plugins\n- Codex CLI plugins\n- Multi-harness support",
+      "expected": { "needs_human_review": true, "note": "Selection=84.5, business=92.3 — high AI relevance, verify pool classification" }
+    },
+    {
+      "full_name": "khoj-ai/khoj",
+      "name": "khoj",
+      "description": "Your AI second brain. Self-hostable. Get answers from the web or your docs.",
+      "topics": ["ai", "llm", "agent", "rag", "automation", "gpt", "claude"],
+      "stars": 34750, "forks": 2214, "language": "Python", "license": "AGPL-3.0",
+      "contributors_count": 5,
+      "readme": "## Khoj — AI Second Brain\n\nSelf-hostable AI knowledge base.\n\n### Installation\ndocker-compose up -d\n\n### Features\n- Document search\n- Custom agents\n- Scheduled automations",
+      "expected": { "needs_human_review": true, "note": "Selection=83.0, AGPL license — verify risk assessment" }
+    },
+    {
+      "full_name": "Budibase/budibase",
+      "name": "budibase",
+      "description": "AI agents, automations and apps that run your operations. Model agnostic.",
+      "topics": ["ai", "agent", "automation", "workflow"],
+      "stars": 27965, "forks": 2156, "language": "TypeScript", "license": "NOASSERTION",
+      "contributors_count": 5,
+      "readme": "## Budibase\n\nAI agents and automations for operations.\n\n### Installation\ndocker-compose up\n\n### Features\n- AI agents\n- Workflow automation\n- App builder",
+      "expected": { "needs_human_review": true, "note": "Selection=77.0, licensed NOASSERTION — verify risk" }
+    },
+    {
+      "full_name": "ComposioHQ/awesome-claude-skills",
+      "name": "awesome-claude-skills",
+      "description": "Awesome list of Claude Code skills and plugins",
+      "topics": ["awesome-list", "claude", "skills", "plugins"],
+      "stars": 62388, "forks": 5000, "language": "Markdown", "license": "",
+      "contributors_count": 5,
+      "readme": "## Awesome Claude Skills\n\nCurated list of Claude Code skills.\n\n### Skills\n- Coding\n- Writing\n- Analysis",
+      "expected": { "needs_human_review": true, "note": "Should go to RESOURCE pool — verify it's not in top5" }
+    },
+    {
+      "full_name": "huginn/huginn",
+      "name": "huginn",
+      "description": "Create agents that monitor and act on your behalf. Your agents are standing by!",
+      "topics": ["automation", "agent", "monitor", "web"],
+      "stars": 45000, "forks": 3800, "language": "Ruby", "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## Huginn\n\nBuild agents that monitor and act on your behalf.\n\n### Installation\ndocker-compose up\n\n### Features\n- Event monitoring\n- Automated actions\n- Web scraping agents",
+      "expected": { "needs_human_review": true, "note": "Selection=76.5, has 'monitor' — verify data_privacy risk isn't false positive" }
+    },
+    {
+      "full_name": "vercel-labs/agent-browser",
+      "name": "agent-browser",
+      "description": "Browser agent for AI. Let LLMs control a browser to complete web tasks.",
+      "topics": ["ai", "agent", "browser", "automation"],
+      "stars": 8000, "forks": 500, "language": "TypeScript", "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## Agent Browser\n\nBrowser agent for AI.\n\n### Installation\nnpm install\n\n### Features\n- LLM browser control\n- Web task automation\n\n### Demo\nTry the demo.",
+      "expected": { "needs_human_review": true, "note": "Browser automation — verify risk=medium, not high" }
+    },
+    {
+      "full_name": "Yeachan-Heo/oh-my-claudecode",
+      "name": "oh-my-claudecode",
+      "description": "Teams-first Multi-agent orchestration for Claude Code",
+      "topics": ["claude-code", "agent", "multi-agent", "orchestration"],
+      "stars": 5000, "forks": 300, "language": "TypeScript", "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## Oh My Claude Code\n\nMulti-agent orchestration for Claude Code.\n\n### Installation\nnpm install\n\n### Features\n- Team-based agents\n- Task orchestration\n- Parallel execution",
+      "expected": { "needs_human_review": true, "note": "Check if this is MCP-related and gets proper AI relevance score" }
+    },
+    {
+      "full_name": "harry0703/MoneyPrinterTurbo",
+      "name": "MoneyPrinterTurbo",
+      "description": "利用AI大模型，一键生成高清短视频 Generate short videos with one click using AI LLM.",
+      "topics": ["ai", "video", "短视频", "automation"],
+      "stars": 20000, "forks": 3000, "language": "Python", "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## MoneyPrinterTurbo\n\n利用AI大模型一键生成高清短视频。\n\n### 安装\npip install -r requirements.txt\n\n### 功能\n- AI视频生成\n- 自动配音\n- 字幕生成",
+      "expected": { "needs_human_review": true, "note": "Chinese AI tool — verify Chinese content handling and platform fit (douyin=96)" }
+    },
+    {
+      "full_name": "apache/airflow",
+      "name": "airflow",
+      "description": "Apache Airflow - A platform to programmatically author, schedule, and monitor workflows.",
+      "topics": ["workflow", "automation", "scheduler", "python"],
+      "stars": 40000, "forks": 16000, "language": "Python", "license": "Apache-2.0",
+      "contributors_count": 5,
+      "readme": "## Apache Airflow\n\nWorkflow orchestration platform.\n\n### Installation\npip install apache-airflow\n\n### Features\n- DAG-based workflows\n- Scheduling\n- Monitoring",
+      "expected": { "needs_human_review": true, "note": "Evergreen candidate in daily — verify it goes to evergreen, not top5" }
+    },
+    {
+      "full_name": "lightpanda-io/browser",
+      "name": "browser",
+      "description": "Headless browser designed for AI and automation. Faster and lighter than Chromium.",
+      "topics": ["browser", "automation", "ai", "headless"],
+      "stars": 5000, "forks": 200, "language": "Zig", "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## Lightpanda Browser\n\nHeadless browser for AI.\n\n### Installation\ncargo install\n\n### Features\n- Fast headless mode\n- AI-friendly API\n- Lightweight",
+      "expected": { "needs_human_review": true, "note": "Risk=high in daily — verify why (may be 'browser' keyword)" }
+    },
+    {
+      "full_name": "appsmithorg/appsmith",
+      "name": "appsmith",
+      "description": "Platform to build admin panels, internal tools, and dashboards. Integrates with 25+ databases.",
+      "topics": ["low-code", "internal-tools", "dashboard", "admin", "api"],
+      "stars": 35000, "forks": 3000, "language": "TypeScript", "license": "Apache-2.0",
+      "contributors_count": 5,
+      "readme": "## Appsmith\n\nBuild internal tools fast.\n\n### Installation\ndocker-compose up\n\n### Features\n- Drag & drop UI\n- API integration\n- Database connectors",
+      "expected": { "needs_human_review": true, "note": "Business=90.8 in daily — verify if this non-AI-core tool deserves such high business score" }
+    },
+    {
+      "full_name": "home-assistant/core",
+      "name": "core",
+      "description": "Open source home automation that puts local control and privacy first.",
+      "topics": ["home-automation", "iot", "python", "privacy"],
+      "stars": 78000, "forks": 31000, "language": "Python", "license": "Apache-2.0",
+      "contributors_count": 5,
+      "readme": "## Home Assistant\n\nOpen source home automation.\n\n### Installation\npip install homeassistant\n\n### Features\n- Local control\n- 1000+ integrations\n- Automation engine",
+      "expected": { "needs_human_review": true, "note": "Should be evergreen — verify demotion from top5" }
+    },
+    {
+      "full_name": "ansible/ansible",
+      "name": "ansible",
+      "description": "Ansible is a radically simple IT automation platform.",
+      "topics": ["automation", "devops", "python", "configuration-management"],
+      "stars": 68712, "forks": 24000, "language": "Python", "license": "GPL-3.0",
+      "contributors_count": 5,
+      "readme": "## Ansible\n\nSimple IT automation.\n\n### Installation\npip install ansible\n\n### Features\n- Agentless\n- YAML playbooks\n- Module library",
+      "expected": { "needs_human_review": true, "note": "Evergreen in daily (69K stars) — verify correct demotion" }
+    },
+    {
+      "full_name": "usebruno/bruno",
+      "name": "bruno",
+      "description": "Open source API client. Offline-first, git-friendly. Alternative to Postman.",
+      "topics": ["api", "client", "testing", "open-source"],
+      "stars": 30000, "forks": 1500, "language": "JavaScript", "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## Bruno — API Client\n\nOffline-first API client.\n\n### Installation\nDownload from website\n\n### Features\n- Git-friendly collections\n- Offline mode\n- No account needed",
+      "expected": { "needs_human_review": true, "note": "Non-AI tool — verify low AI relevance score" }
+    },
+    {
+      "full_name": "D4Vinci/Scrapling",
+      "name": "Scrapling",
+      "description": "Advanced web scraping tool with stealth capabilities",
+      "topics": ["scraping", "bypass", "stealth", "python"],
+      "stars": 5000, "forks": 300, "language": "Python", "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## Scrapling\n\nAdvanced web scraping with stealth.\n\n### Features\n- Anti-detection\n- Proxy rotation\n- Bypass protections",
+      "expected": { "needs_human_review": true, "note": "BLOCKED in daily with 'bypass' keyword — verify this is correct and not over-blocking" }
+    },
+    {
+      "full_name": "feder-cr/Jobs_Applier_AI_Agent_AIHawk",
+      "name": "Jobs_Applier_AI_Agent_AIHawk",
+      "description": "AI agent that automatically applies to jobs on LinkedIn and other platforms",
+      "topics": ["ai", "automation", "job-search", "linkedin", "spam"],
+      "stars": 28000, "forks": 4000, "language": "Python", "license": "",
+      "contributors_count": 5,
+      "readme": "## AIHawk — AI Job Applier\n\nAutomatically apply to jobs with AI.\n\n### Features\n- Auto-fill applications\n- LinkedIn automation\n- Multi-platform",
+      "expected": { "needs_human_review": true, "note": "BLOCKED in daily with 'spam' keyword — verify automated job applications should be blocked" }
+    },
+    {
+      "full_name": "SeleniumHQ/selenium",
+      "name": "selenium",
+      "description": "Browser automation framework and ecosystem. WebDriver for all major browsers.",
+      "topics": ["browser", "automation", "testing", "webdriver"],
+      "stars": 32000, "forks": 8000, "language": "Java", "license": "Apache-2.0",
+      "contributors_count": 5,
+      "readme": "## Selenium\n\nBrowser automation for testing.\n\n### Installation\npip install selenium\n\n### Features\n- Cross-browser testing\n- WebDriver protocol\n- Grid for parallel execution",
+      "expected": { "needs_human_review": true, "note": "BLOCKED in daily — WHY? Selenium is legitimate testing framework. This may be over-blocking." }
+    },
+    {
+      "full_name": "FujiwaraChoki/MoneyPrinterV2",
+      "name": "MoneyPrinterV2",
+      "description": "Automate the creation of YouTube videos using AI. Generate scripts, voiceovers, and visuals.",
+      "topics": ["ai", "video", "youtube", "automation", "content"],
+      "stars": 12000, "forks": 1500, "language": "Python", "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## MoneyPrinterV2\n\nAI-powered YouTube video creation.\n\n### Installation\npip install -r requirements.txt\n\n### Features\n- Script generation\n- TTS voiceover\n- Visual assembly",
+      "expected": { "needs_human_review": true, "note": "Similar to MoneyPrinterTurbo — verify consistent scoring across similar tools" }
+    }
+  ]
+}

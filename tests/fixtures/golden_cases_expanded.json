@@ -1,0 +1,2561 @@
+{
+  "description": "扩展黄金样本集 — 80+ 典型 GitHub AI 项目，覆盖 5 大类型 + 8 blocked cases，用于 Phase 6 评分校准。",
+  "version": "2.0.0",
+  "created": "2026-05-29",
+  "cases": [
+    {
+      "full_name": "browser-use/browser-use",
+      "name": "browser-use",
+      "description": "Make websites accessible for AI agents. Automate tasks online with ease.",
+      "topics": [
+        "ai-agents",
+        "ai-tools",
+        "browser-automation",
+        "browser-use",
+        "llm",
+        "playwright",
+        "python"
+      ],
+      "stars": 96146,
+      "forks": 10791,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## Installation\n\npip install browser-use\n\n## Quick Start\n\n```python\nfrom browser_use import Agent\nagent = Agent(task='Search for latest AI news')\nawait agent.run()\n```\n\n## Demo\n\n![demo](https://github.com/browser-use/browser-use/raw/main/demo.gif)\n\n## Use Cases\n\n- Web automation for business workflows\n- Competitor monitoring and GEO analysis\n- Automate repetitive browser tasks",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 80,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 85,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "xiaohongshu": {
+            "min": 70,
+            "max": 100
+          },
+          "douyin": {
+            "min": 70,
+            "max": 100
+          },
+          "videohao": {
+            "min": 65,
+            "max": 100
+          },
+          "wechat": {
+            "min": 65,
+            "max": 100
+          },
+          "geo_trade": {
+            "min": 80,
+            "max": 100
+          }
+        },
+        "risk_warnings_required": [
+          "浏览器自动化",
+          "平台规则"
+        ]
+      },
+      "reason": "浏览器自动化=AI从聊天走向执行，可直接讲外贸/竞品/GEO/企业流程自动化场景"
+    },
+    {
+      "full_name": "infiniflow/ragflow",
+      "name": "ragflow",
+      "description": "RAGFlow is an open-source RAG engine based on deep document understanding.",
+      "topics": [
+        "rag",
+        "llm",
+        "knowledge-base",
+        "enterprise-search",
+        "document-ai",
+        "ai"
+      ],
+      "stars": 55000,
+      "forks": 5000,
+      "language": "Python",
+      "license": "Apache-2.0",
+      "contributors_count": 30,
+      "readme": "## RAGFlow — Deep Document Understanding RAG Engine\n\n### What is RAGFlow?\n\nRAGFlow是一个基于深度文档理解的开源RAG引擎。\n\n### Installation\n\n```bash\ndocker-compose up -d\n```\n\n### Features\n\n- 企业知识库问答\n- 客服自动化\n- 内部文档检索\n- Multi-format document parsing\n\n### Demo\n\nTry the live demo at demo.ragflow.io\n\n### Enterprise Use Cases\n\n- 企业知识库\n- 客服系统\n- 内部培训",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 80,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 85,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "xiaohongshu": {
+            "min": 65,
+            "max": 100
+          },
+          "douyin": {
+            "min": 65,
+            "max": 100
+          },
+          "videohao": {
+            "min": 80,
+            "max": 100
+          },
+          "wechat": {
+            "min": 80,
+            "max": 100
+          },
+          "geo_trade": {
+            "min": 50,
+            "max": 100
+          }
+        }
+      },
+      "reason": "RAG企业知识库=AI-FDE核心场景，适合企业落地/降本增效/公众号深度拆解"
+    },
+    {
+      "full_name": "firecrawl/firecrawl",
+      "name": "firecrawl",
+      "description": "The API to search, scrape, and interact with the web at scale.",
+      "topics": [
+        "web-scraping",
+        "ai",
+        "search",
+        "api",
+        "crawler",
+        "llm"
+      ],
+      "stars": 125980,
+      "forks": 7560,
+      "language": "TypeScript",
+      "license": "AGPL-3.0",
+      "contributors_count": 25,
+      "readme": "## Firecrawl\n\nTurn websites into LLM-ready data.\n\n### Installation\n\n```bash\nnpm install @mendable/firecrawl\n```\n\n### Quick Start\n\n```javascript\nconst app = new FirecrawlApp({ apiKey: 'YOUR_API_KEY' });\nconst result = await app.scrapeUrl('https://example.com');\n```\n\n### Features\n\n- Web scraping at scale\n- AI-powered extraction\n- Search integration\n- API access",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 65,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 75,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "xiaohongshu": {
+            "min": 65,
+            "max": 100
+          },
+          "douyin": {
+            "min": 70,
+            "max": 100
+          },
+          "videohao": {
+            "min": 65,
+            "max": 100
+          },
+          "wechat": {
+            "min": 55,
+            "max": 100
+          },
+          "geo_trade": {
+            "min": 70,
+            "max": 100
+          }
+        }
+      },
+      "reason": "网页抓取+AI搜索=GEO/外贸场景强相关，API服务可讲商业延展"
+    },
+    {
+      "full_name": "modelcontextprotocol/servers",
+      "name": "servers",
+      "description": "Model Context Protocol Servers — official reference implementations.",
+      "topics": [
+        "mcp",
+        "ai",
+        "llm",
+        "agent",
+        "tool-use",
+        "function-calling"
+      ],
+      "stars": 35000,
+      "forks": 3000,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 40,
+      "readme": "## MCP Servers\n\nReference implementations of Model Context Protocol servers.\n\n### What is MCP?\n\nMCP is an open protocol that enables AI models to securely connect with external tools and data sources.\n\n### Available Servers\n\n- Filesystem\n- GitHub\n- Google Drive\n- PostgreSQL\n- Slack\n\n### Quick Start\n\n```bash\nnpx @modelcontextprotocol/server-<name>\n```",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 75,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 75,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "xiaohongshu": {
+            "min": 65,
+            "max": 100
+          },
+          "douyin": {
+            "min": 65,
+            "max": 100
+          },
+          "videohao": {
+            "min": 70,
+            "max": 100
+          },
+          "wechat": {
+            "min": 70,
+            "max": 100
+          },
+          "geo_trade": {
+            "min": 50,
+            "max": 100
+          }
+        }
+      },
+      "reason": "MCP协议=AI工具调用标准，AI-FDE生态价值高，适合公众号方法论拆解"
+    },
+    {
+      "full_name": "google-gemini/gemini-cli",
+      "name": "gemini-cli",
+      "description": "An open-source AI agent that brings the power of Gemini directly into your terminal.",
+      "topics": [
+        "gemini",
+        "cli",
+        "ai",
+        "agent",
+        "terminal",
+        "google"
+      ],
+      "stars": 104705,
+      "forks": 13929,
+      "language": "TypeScript",
+      "license": "Apache-2.0",
+      "contributors_count": 20,
+      "readme": "## Gemini CLI\n\nAn open-source AI agent that brings Gemini directly into your terminal.\n\n### Installation\n\n```bash\nnpm install -g @google/gemini-cli\n```\n\n### Quick Start\n\n```bash\ngemini \"explain this codebase\"\n```\n\n### Features\n\n- Open source\n- Bring your own API key\n- MCP tool integration\n- Terminal-native experience",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 65,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 65,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "xiaohongshu": {
+            "min": 60,
+            "max": 100
+          },
+          "douyin": {
+            "min": 65,
+            "max": 100
+          },
+          "videohao": {
+            "min": 60,
+            "max": 100
+          },
+          "wechat": {
+            "min": 65,
+            "max": 100
+          },
+          "geo_trade": {
+            "min": 40,
+            "max": 100
+          }
+        }
+      },
+      "reason": "AI Agent CLI工具，可运行可演示，适合短视频展示"
+    },
+    {
+      "full_name": "ComposioHQ/composio",
+      "name": "composio",
+      "description": "Composio connects AI agents with 250+ tools and APIs for task automation.",
+      "topics": [
+        "ai",
+        "agent",
+        "automation",
+        "tool-use",
+        "integration",
+        "llm"
+      ],
+      "stars": 28000,
+      "forks": 2500,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 15,
+      "readme": "## Composio\n\nConnect AI agents with 250+ tools.\n\n### Installation\n\n```bash\npip install composio-core\n```\n\n### Quick Start\n\n```python\nfrom composio import ComposioToolSet\ntoolset = ComposioToolSet()\n```\n\n### Integrations\n\n- GitHub, Google, Salesforce, Slack\n- 250+ tools and APIs",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 75,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 75,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "xiaohongshu": {
+            "min": 60,
+            "max": 100
+          },
+          "douyin": {
+            "min": 60,
+            "max": 100
+          },
+          "videohao": {
+            "min": 70,
+            "max": 100
+          },
+          "wechat": {
+            "min": 70,
+            "max": 100
+          },
+          "geo_trade": {
+            "min": 50,
+            "max": 100
+          }
+        }
+      },
+      "reason": "Agent工具集成平台，250+工具连接=企业自动化落地场景丰富"
+    },
+    {
+      "full_name": "crewAIInc/crewAI",
+      "name": "crewAI",
+      "description": "Framework for orchestrating role-playing AI agents that collaborate to solve complex tasks.",
+      "topics": [
+        "ai",
+        "agent",
+        "multi-agent",
+        "orchestration",
+        "automation",
+        "llm"
+      ],
+      "stars": 45000,
+      "forks": 5000,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 25,
+      "readme": "## CrewAI\n\nMulti-agent orchestration framework.\n\n### Installation\n\n```bash\npip install crewai\n```\n\n### Quick Start\n\n```python\nfrom crewai import Agent, Task, Crew\n```\n\n### Features\n\n- Role-based agents\n- Task delegation\n- Multi-agent collaboration",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 60,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 65,
+          "max": 100
+        }
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，多Agent编排框架，适合专题复盘"
+    },
+    {
+      "full_name": "run-llama/llama_index",
+      "name": "llama_index",
+      "description": "LlamaIndex is the central interface between LLMs and your external data.",
+      "topics": [
+        "rag",
+        "llm",
+        "data-framework",
+        "ai",
+        "python"
+      ],
+      "stars": 45000,
+      "forks": 6000,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 50,
+      "readme": "## LlamaIndex\n\nData framework for LLM applications.\n\n### Installation\n\n```bash\npip install llama-index\n```\n\n### Features\n\n- Data connectors\n- Index structures\n- Query engines",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low"
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，RAG基础设施框架"
+    },
+    {
+      "full_name": "cag-rest/cag-rest",
+      "name": "cag-rest",
+      "description": "Cache Augmented Generation REST API — ultra-fast RAG without vector databases.",
+      "topics": [
+        "rag",
+        "llm",
+        "cache",
+        "api",
+        "ai"
+      ],
+      "stars": 3200,
+      "forks": 200,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 3,
+      "readme": "## CAG-REST\n\nCache Augmented Generation — RAG without vector DBs.\n\n### Installation\n\n```bash\ndocker-compose up\n```\n\n### Features\n\n- No vector database needed\n- Ultra-fast retrieval\n- REST API",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 65,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 65,
+          "max": 100
+        }
+      },
+      "reason": "新兴RAG项目，中等star但概念新颖，可讲内容多"
+    },
+    {
+      "full_name": "langgenius/dify",
+      "name": "dify",
+      "description": "Production-ready platform for agentic workflow development. Build AI apps with visual orchestration.",
+      "topics": [
+        "ai",
+        "low-code",
+        "workflow",
+        "orchestration",
+        "agent",
+        "llm",
+        "rag"
+      ],
+      "stars": 143091,
+      "forks": 20000,
+      "language": "Python",
+      "license": "Apache-2.0",
+      "contributors_count": 60,
+      "readme": "## Dify\n\nProduction-ready AI workflow platform.\n\n### Features\n\n- Visual workflow builder\n- RAG pipeline\n- Agent capabilities\n- Multi-model support\n\n### Installation\n\n```bash\ndocker-compose up -d\n```",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 40,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 65,
+          "max": 100
+        }
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool，不进入daily Top 5"
+    },
+    {
+      "full_name": "n8n-io/n8n",
+      "name": "n8n",
+      "description": "Fair-code workflow automation platform with native AI capabilities. Combine visual workflow with AI agents.",
+      "topics": [
+        "automation",
+        "workflow",
+        "ai",
+        "low-code",
+        "n8n",
+        "self-hosted"
+      ],
+      "stars": 190202,
+      "forks": 25000,
+      "language": "TypeScript",
+      "license": "Sustainable Use License",
+      "contributors_count": 80,
+      "readme": "## n8n\n\nWorkflow automation with AI.\n\n### Features\n\n- Visual workflow builder\n- 400+ integrations\n- AI agent nodes\n- Self-hosted\n\n### Installation\n\n```bash\ndocker run -p 5678:5678 n8nio/n8n\n```",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 35,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 70,
+          "max": 100
+        }
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool"
+    },
+    {
+      "full_name": "langchain-ai/langchain",
+      "name": "langchain",
+      "description": "Build context-aware, reasoning applications with LangChain's flexible framework for LLM applications.",
+      "topics": [
+        "llm",
+        "ai",
+        "python",
+        "langchain",
+        "framework",
+        "agent"
+      ],
+      "stars": 137963,
+      "forks": 22000,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 100,
+      "readme": "## LangChain\n\nFramework for building LLM-powered applications.\n\n### Installation\n\n```bash\npip install langchain\n```",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 35,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 55,
+          "max": 100
+        }
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool"
+    },
+    {
+      "full_name": "open-webui/open-webui",
+      "name": "open-webui",
+      "description": "User-friendly AI Interface with RAG, web search, agents, and multi-model support.",
+      "topics": [
+        "llm",
+        "chatbot",
+        "rag",
+        "ai",
+        "webui",
+        "self-hosted"
+      ],
+      "stars": 120000,
+      "forks": 15000,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 45,
+      "readme": "## Open WebUI\n\nSelf-hosted AI chat interface.\n\n### Features\n\n- RAG support\n- Multi-model\n- Web search\n- Agent support\n\n### Installation\n\n```bash\ndocker run -p 3000:8080 open-webui/open-webui\n```",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 30,
+          "max": 100
+        }
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool"
+    },
+    {
+      "full_name": "Significant-Gravitas/AutoGPT",
+      "name": "AutoGPT",
+      "description": "AutoGPT is the vision of accessible AI for everyone, to use and to build on.",
+      "topics": [
+        "ai",
+        "agent",
+        "automation",
+        "autogpt",
+        "llm"
+      ],
+      "stars": 184630,
+      "forks": 45000,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 70,
+      "readme": "## AutoGPT\n\nAutonomous AI agent.\n\n### Features\n\n- Autonomous task execution\n- Web browsing\n- File operations\n\n### Installation\n\n```bash\npip install autogpt\n```",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 30,
+          "max": 100
+        }
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool"
+    },
+    {
+      "full_name": "Shubhamsaboo/awesome-llm-apps",
+      "name": "awesome-llm-apps",
+      "description": "A curated list of 100+ awesome LLM apps with RAG and AI agents you can actually run.",
+      "topics": [
+        "awesome-list",
+        "llm",
+        "rag",
+        "ai-agent",
+        "curated-list"
+      ],
+      "stars": 112113,
+      "forks": 8000,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## Awesome LLM Apps\n\nCurated collection of LLM apps.\n\n### Categories\n\n- RAG apps\n- Agent apps\n- Chat apps\n- Code assistants",
+      "expected": {
+        "pool": "resource",
+        "content_type": "awesome_list",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 30,
+          "max": 80
+        }
+      },
+      "reason": "Awesome list/资源合集，进入resource_pool，不作为每日主选题"
+    },
+    {
+      "full_name": "punkpeye/awesome-mcp-servers",
+      "name": "awesome-mcp-servers",
+      "description": "A collection of MCP servers.",
+      "topics": [
+        "mcp",
+        "awesome-list",
+        "servers",
+        "ai"
+      ],
+      "stars": 88142,
+      "forks": 5000,
+      "language": "Markdown",
+      "license": "MIT",
+      "contributors_count": 10,
+      "readme": "## Awesome MCP Servers\n\nA curated list of MCP servers.\n\n### Categories\n\n- Official servers\n- Community servers\n- Tools & Utilities",
+      "expected": {
+        "pool": "resource",
+        "content_type": "awesome_list",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 30,
+          "max": 80
+        }
+      },
+      "reason": "Awesome list/资源合集，进入resource_pool"
+    },
+    {
+      "full_name": "f/prompts.chat",
+      "name": "prompts.chat",
+      "description": "Awesome ChatGPT prompts — curated collection of prompt examples for ChatGPT and LLMs.",
+      "topics": [
+        "chatgpt",
+        "prompts",
+        "awesome-list",
+        "ai"
+      ],
+      "stars": 163013,
+      "forks": 12000,
+      "language": "HTML",
+      "license": "MIT",
+      "contributors_count": 15,
+      "readme": "## Awesome ChatGPT Prompts\n\nCollection of prompt examples.\n\n### Categories\n\n- Writing\n- Coding\n- Business\n- Marketing",
+      "expected": {
+        "pool": "resource",
+        "content_type": "awesome_list",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 25,
+          "max": 80
+        }
+      },
+      "reason": "Prompt合集/资源类，进入resource_pool"
+    },
+    {
+      "full_name": "microsoft/generative-ai-for-beginners",
+      "name": "generative-ai-for-beginners",
+      "description": "21 Lessons, Get Started Building with Generative AI.",
+      "topics": [
+        "generative-ai",
+        "tutorial",
+        "microsoft",
+        "ai",
+        "course"
+      ],
+      "stars": 111492,
+      "forks": 59840,
+      "language": "Jupyter Notebook",
+      "license": "MIT",
+      "contributors_count": 30,
+      "readme": "## Generative AI for Beginners\n\n21 lessons teaching generative AI.\n\n### Lessons\n\n1. Introduction to Generative AI\n2. Prompt Engineering\n3. Building AI Applications\n\n### Getting Started\n\n```bash\ngit clone https://github.com/microsoft/generative-ai-for-beginners\n```",
+      "expected": {
+        "pool": "resource",
+        "content_type": "tutorial_guide",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 25,
+          "max": 80
+        }
+      },
+      "reason": "教程类项目，进入resource_pool或降权处理"
+    },
+    {
+      "full_name": "rasbt/LLMs-from-scratch",
+      "name": "LLMs-from-scratch",
+      "description": "Implement an LLM from scratch in Python — code for the book 'Build a Large Language Model'.",
+      "topics": [
+        "llm",
+        "tutorial",
+        "deep-learning",
+        "python",
+        "book"
+      ],
+      "stars": 48000,
+      "forks": 4000,
+      "language": "Jupyter Notebook",
+      "license": "MIT",
+      "contributors_count": 5,
+      "readme": "## Build a Large Language Model (From Scratch)\n\nCode for the book.\n\n### Chapters\n\n1. Understanding Large Language Models\n2. Working with Text Data\n3. Coding Attention Mechanisms",
+      "expected": {
+        "pool": "resource",
+        "content_type": "tutorial_guide",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 25,
+          "max": 80
+        }
+      },
+      "reason": "教程/书籍代码类项目，进入resource_pool"
+    },
+    {
+      "full_name": "Snailclimb/JavaGuide",
+      "name": "JavaGuide",
+      "description": "Java 面试 & 后端通用面试指南，覆盖计算机基础、数据库、分布式、高并发、系统设计与 AI 应用开发",
+      "topics": [
+        "java",
+        "interview",
+        "guide",
+        "后端"
+      ],
+      "stars": 155958,
+      "forks": 45000,
+      "language": "Java",
+      "license": "Apache-2.0",
+      "contributors_count": 30,
+      "readme": "## JavaGuide\n\nJava面试指南，涵盖Java基础、并发、JVM、数据库、分布式、微服务等内容。\n\n### 目录\n\n1. Java基础\n2. 并发编程\n3. JVM\n4. 数据库",
+      "expected": {
+        "pool": "resource",
+        "content_type": "tutorial_guide",
+        "risk_overall": "low"
+      },
+      "reason": "Java面试教程，非AI-FDE内容，必须不进Top 5"
+    },
+    {
+      "full_name": "hacksider/Deep-Live-Cam",
+      "name": "Deep-Live-Cam",
+      "description": "Real-time face swap and deepfake webcam tool with one-click video generation.",
+      "topics": [
+        "deepfake",
+        "face-swap",
+        "ai",
+        "webcam",
+        "video"
+      ],
+      "stars": 55000,
+      "forks": 8000,
+      "language": "Python",
+      "license": "AGPL-3.0",
+      "contributors_count": 8,
+      "readme": "## Deep-Live-Cam\n\nReal-time face swap for webcam.\n\n### Features\n\n- Real-time face swap\n- One-click deepfake\n- Fake webcam for video calls\n\n### Installation\n\n```bash\npip install deep-live-cam\n```",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "repo_selection_score": {
+          "min": 0,
+          "max": 60
+        }
+      },
+      "reason": "深伪/人脸替换工具，必须blocked，不能进入任何推荐池"
+    },
+    {
+      "full_name": "evil-fake/phishing-kit",
+      "name": "phishing-kit",
+      "description": "Advanced phishing toolkit with credential harvesting and email spoofing capabilities.",
+      "topics": [
+        "phishing",
+        "security",
+        "credential",
+        "spam"
+      ],
+      "stars": 1200,
+      "forks": 300,
+      "language": "Python",
+      "license": "",
+      "contributors_count": 2,
+      "readme": "## Phishing Toolkit\n\nCredential harvesting made easy.\n\n### Features\n\n- Email spoofing\n- Credential capture\n- Auto-redirect",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked"
+      },
+      "reason": "钓鱼工具，必须blocked"
+    },
+    {
+      "full_name": "face-swap/fake-webcam-pro",
+      "name": "fake-webcam-pro",
+      "description": "Professional fake webcam with AI face swap and voice cloning for video calls.",
+      "topics": [
+        "face-swap",
+        "voice-clone",
+        "fake-webcam",
+        "ai"
+      ],
+      "stars": 8000,
+      "forks": 1500,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 3,
+      "readme": "## Fake Webcam Pro\n\nAI-powered fake webcam with voice cloning.\n\n### Features\n\n- Real-time face swap\n- Voice cloning\n- Virtual camera output\n\n### Installation\n\n```bash\npip install fake-webcam-pro\n```",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked"
+      },
+      "reason": "伪造摄像头+语音克隆，必须blocked"
+    },
+    {
+      "full_name": "ollama/ollama",
+      "name": "ollama",
+      "description": "Get up and running with large language models locally.",
+      "topics": [
+        "llm",
+        "ai",
+        "local",
+        "go"
+      ],
+      "stars": 150000,
+      "forks": 12000,
+      "language": "Go",
+      "license": "MIT",
+      "contributors_count": 60,
+      "readme": "## Ollama\n\nRun LLMs locally.\n\n### Quick Start\n\n```bash\nollama run llama3\n```\n\n### Features\n\n- Local LLM inference\n- Model library\n- REST API",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 30,
+          "max": 100
+        }
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool"
+    },
+    {
+      "full_name": "supabase/supabase",
+      "name": "supabase",
+      "description": "The open source Firebase alternative. Supabase gives you a Postgres database, Authentication, APIs, Edge Functions, Realtime subscriptions, and AI vectors.",
+      "topics": [
+        "database",
+        "firebase",
+        "postgres",
+        "api",
+        "real-time"
+      ],
+      "stars": 103169,
+      "forks": 10000,
+      "language": "TypeScript",
+      "license": "Apache-2.0",
+      "contributors_count": 100,
+      "readme": "## Supabase\n\nOpen source Firebase alternative.\n\n### Products\n\n- Database\n- Auth\n- Storage\n- Edge Functions\n- Vector embeddings",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low"
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool"
+    },
+    {
+      "full_name": "Comfy-Org/ComfyUI",
+      "name": "ComfyUI",
+      "description": "The most powerful and modular diffusion model GUI with a graph/nodes interface.",
+      "topics": [
+        "stable-diffusion",
+        "ai",
+        "gui",
+        "image-generation",
+        "workflow"
+      ],
+      "stars": 114874,
+      "forks": 12000,
+      "language": "Python",
+      "license": "GPL-3.0",
+      "contributors_count": 80,
+      "readme": "## ComfyUI\n\nNode-based interface for Stable Diffusion.\n\n### Features\n\n- Graph-based workflow\n- Modular design\n- Community nodes",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "medium"
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool"
+    },
+    {
+      "full_name": "AUTOMATIC1111/stable-diffusion-webui",
+      "name": "stable-diffusion-webui",
+      "description": "Stable Diffusion web UI — a browser interface for Stable Diffusion based on Gradio library.",
+      "topics": [
+        "stable-diffusion",
+        "ai",
+        "image-generation",
+        "webui",
+        "deep-learning"
+      ],
+      "stars": 163341,
+      "forks": 30000,
+      "language": "Python",
+      "license": "AGPL-3.0",
+      "contributors_count": 50,
+      "readme": "## Stable Diffusion Web UI\n\nBrowser interface for Stable Diffusion.\n\n### Features\n\n- txt2img\n- img2img\n- Inpainting\n- Extensions",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 25,
+          "max": 100
+        }
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool"
+    },
+    {
+      "full_name": "meta-llama/llama",
+      "name": "llama",
+      "description": "Inference code for Llama models — Meta's open-source large language model.",
+      "topics": [
+        "llm",
+        "meta",
+        "ai",
+        "inference",
+        "pytorch"
+      ],
+      "stars": 80000,
+      "forks": 12000,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 15,
+      "readme": "## Llama\n\nMeta's open-source LLM.\n\n### Models\n\n- Llama 3.2\n- Llama 3.1\n- Llama Guard",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 25,
+          "max": 100
+        }
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool"
+    },
+    {
+      "full_name": "microsoft/autogen",
+      "name": "autogen",
+      "description": "A programming framework for building multi-agent AI applications that can converse and collaborate to solve tasks.",
+      "topics": [
+        "ai",
+        "agent",
+        "multi-agent",
+        "microsoft",
+        "llm",
+        "automation"
+      ],
+      "stars": 60000,
+      "forks": 9000,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 50,
+      "readme": "## AutoGen\n\nMulti-agent conversation framework.\n\n### Features\n\n- Multi-agent conversations\n- Code generation\n- Tool use\n\n### Installation\n\n```bash\npip install autogen\n```",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 30,
+          "max": 100
+        }
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool"
+    },
+    {
+      "full_name": "langflow-ai/langflow",
+      "name": "langflow",
+      "description": "Langflow is a low-code AI builder for RAG and multi-agent workflows with visual drag-and-drop interface.",
+      "topics": [
+        "ai",
+        "low-code",
+        "rag",
+        "agent",
+        "langchain",
+        "visual"
+      ],
+      "stars": 148868,
+      "forks": 18000,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 50,
+      "readme": "## Langflow\n\nVisual AI workflow builder.\n\n### Features\n\n- Drag-and-drop builder\n- RAG pipelines\n- Agent workflows\n- API export\n\n### Installation\n\n```bash\npip install langflow\n```",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 30,
+          "max": 100
+        }
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool"
+    },
+    {
+      "full_name": "ChatGPTNextWeb/NextChat",
+      "name": "NextChat",
+      "description": "A cross-platform ChatGPT web UI with private deployment support.",
+      "topics": [
+        "chatgpt",
+        "webui",
+        "nextjs",
+        "ai",
+        "self-hosted"
+      ],
+      "stars": 88111,
+      "forks": 70000,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 25,
+      "readme": "## NextChat\n\nCross-platform ChatGPT UI.\n\n### Features\n\n- Private deployment\n- Multi-model support\n- Markdown rendering\n\n### Installation\n\n```bash\ndocker run -p 3000:3000 chatgpt-next-web\n```",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 25,
+          "max": 100
+        }
+      },
+      "reason": "常青项目(>50K stars)，进入evergreen_pool"
+    },
+    {
+      "full_name": "vercel/ai-chatbot",
+      "name": "ai-chatbot",
+      "description": "A full-featured, hackable Next.js AI chatbot template built by Vercel with AI SDK.",
+      "topics": [
+        "ai",
+        "chatbot",
+        "nextjs",
+        "vercel",
+        "template",
+        "typescript"
+      ],
+      "stars": 28000,
+      "forks": 5000,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 15,
+      "readme": "## AI Chatbot\n\nNext.js AI chatbot template.\n\n### Features\n\n- Multi-model support\n- Streaming responses\n- Chat history\n- Markdown support\n\n### Quick Start\n\n```bash\nnpx create-next-app --example ai-chatbot\n```",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 60,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 65,
+          "max": 100
+        }
+      },
+      "reason": "AI Chatbot模板，可运行项目，适合快速上手演示"
+    },
+    {
+      "full_name": "anthropics/anthropic-quickstarts",
+      "name": "anthropic-quickstarts",
+      "description": "A collection of quickstart projects designed to help developers build with the Anthropic API and Claude.",
+      "topics": [
+        "anthropic",
+        "claude",
+        "ai",
+        "tutorial",
+        "quickstart",
+        "llm"
+      ],
+      "stars": 15000,
+      "forks": 2000,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 20,
+      "readme": "## Anthropic Quickstarts\n\nQuickstart projects for Claude.\n\n### Projects\n\n- Customer support agent\n- Sales prospecting\n- Document analysis\n\n### Quick Start\n\n```bash\ngit clone https://github.com/anthropics/anthropic-quickstarts\n```",
+      "expected": {
+        "pool": "top5",
+        "content_type": "tutorial_guide",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 60,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 65,
+          "max": 100
+        }
+      },
+      "reason": "Claude官方Quickstart，有客服/销售/文档分析场景，企业落地价值高"
+    },
+    {
+      "full_name": "openai/openai-python",
+      "name": "openai-python",
+      "description": "The official Python library for the OpenAI API.",
+      "topics": [
+        "openai",
+        "api",
+        "python",
+        "sdk",
+        "ai"
+      ],
+      "stars": 35000,
+      "forks": 5000,
+      "language": "Python",
+      "license": "Apache-2.0",
+      "contributors_count": 40,
+      "readme": "## OpenAI Python Library\n\nOfficial Python library for OpenAI API.\n\n### Installation\n\n```bash\npip install openai\n```\n\n### Usage\n\n```python\nfrom openai import OpenAI\nclient = OpenAI()\n```",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 25,
+          "max": 100
+        }
+      },
+      "reason": "已知常青项目(KNOWN_EVERGREEN)，进入evergreen_pool"
+    },
+    {
+      "full_name": "simonw/llm",
+      "name": "llm",
+      "description": "Access large language models from the command-line. Supports multiple models and plugins.",
+      "topics": [
+        "llm",
+        "cli",
+        "ai",
+        "openai",
+        "plugin",
+        "python"
+      ],
+      "stars": 22000,
+      "forks": 1000,
+      "language": "Python",
+      "license": "Apache-2.0",
+      "contributors_count": 10,
+      "readme": "## LLM\n\nCLI for large language models.\n\n### Installation\n\n```bash\npip install llm\n```\n\n### Usage\n\n```bash\nllm \"Explain quantum computing in one sentence\"\n```\n\n### Plugins\n\n- llm-gpt4all\n- llm-mistral\n- llm-claude",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 60,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 65,
+          "max": 100
+        }
+      },
+      "reason": "CLI工具，可运行可演示，适合短视频/小红书快速展示"
+    },
+    {
+      "full_name": "getzep/zep",
+      "name": "zep",
+      "description": "Zep: The memory layer for AI agents — long-term memory, user facts, and knowledge graph for LLM apps.",
+      "topics": [
+        "ai",
+        "memory",
+        "agent",
+        "rag",
+        "llm",
+        "knowledge-graph"
+      ],
+      "stars": 8000,
+      "forks": 800,
+      "language": "Go",
+      "license": "Apache-2.0",
+      "contributors_count": 15,
+      "readme": "## Zep\n\nMemory layer for AI agents.\n\n### Features\n\n- Long-term memory\n- User facts\n- Knowledge graph\n- RAG integration\n\n### Installation\n\n```bash\ndocker run -p 8000:8000 getzep/zep\n```",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 70,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 70,
+          "max": 100
+        }
+      },
+      "reason": "Agent记忆层=Agent生态关键组件，AI-FDE训练价值高"
+    },
+    {
+      "full_name": "jxnl/instructor",
+      "name": "instructor",
+      "description": "Structured outputs for LLMs — patch OpenAI clients to return Pydantic models instead of raw JSON.",
+      "topics": [
+        "llm",
+        "openai",
+        "pydantic",
+        "python",
+        "structured-output",
+        "function-calling"
+      ],
+      "stars": 25000,
+      "forks": 2000,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 20,
+      "readme": "## Instructor\n\nStructured outputs for LLMs.\n\n### Features\n\n- Pydantic model extraction\n- Type-safe responses\n- Retry logic\n- Validation\n\n### Installation\n\n```bash\npip install instructor\n```",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 65,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 65,
+          "max": 100
+        }
+      },
+      "reason": "结构化输出=企业落地关键，function-calling生态组件"
+    },
+    {
+      "full_name": "openai/swarm",
+      "name": "swarm",
+      "description": "Educational framework exploring ergonomic, lightweight multi-agent orchestration. Managed by OpenAI Solution team.",
+      "topics": [
+        "ai",
+        "agent",
+        "multi-agent",
+        "openai",
+        "orchestration",
+        "educational"
+      ],
+      "stars": 35000,
+      "forks": 3500,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 10,
+      "readme": "## Swarm\n\nLightweight multi-agent orchestration.\n\n### Concepts\n\n- Agents\n- Handoffs\n- Routines\n\n### Installation\n\n```bash\npip install openai-swarm\n```",
+      "expected": {
+        "pool": "top5",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 65,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 65,
+          "max": 100
+        }
+      },
+      "reason": "OpenAI官方Agent编排框架，教育/实验价值高"
+    },
+    {
+      "full_name": "thedotmack/claude-mem",
+      "name": "claude-mem",
+      "description": "A persistent memory layer for Claude Code — stores project context, user preferences, and past decisions across sessions.",
+      "topics": [
+        "claude",
+        "memory",
+        "ai",
+        "mcp",
+        "agent"
+      ],
+      "stars": 5500,
+      "forks": 300,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 3,
+      "readme": "## Claude Mem\n\nPersistent memory for Claude Code.\n\n### Features\n\n- Session persistence\n- Project context\n- User preferences\n- Auto-memory\n\n### Installation\n\n```bash\nnpm install claude-mem\n```",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 65,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 60,
+          "max": 100
+        }
+      },
+      "reason": "Agent记忆/MCP工具，新兴项目，适合先发优势选题"
+    },
+    {
+      "full_name": "ItzCrazyKns/Perplexica",
+      "name": "Perplexica",
+      "description": "AI-powered search engine built with Next.js and search APIs. Perplexica is an open source AI search tool.",
+      "topics": [
+        "ai-search",
+        "seo",
+        "geo",
+        "search-engine",
+        "nextjs",
+        "llm",
+        "rag"
+      ],
+      "stars": 25000,
+      "forks": 3000,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 25,
+      "readme": "## Perplexica — AI Search Engine\n\nAn AI-powered search engine.\n\n### Installation\nnpm install\n\n### Demo\nLive demo at perplexica.example.com\n\n### Features\n- AI search with multiple sources\n- GEO optimization\n- Self-hostable",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 75,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 80,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "geo_trade": {
+            "min": 75,
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "full_name": "BerriAI/litellm",
+      "name": "litellm",
+      "description": "Call all LLM APIs using the OpenAI format. Use Bedrock, Azure, OpenAI, Cohere, Anthropic, Ollama, Sagemaker, HuggingFace, Replicate.",
+      "topics": [
+        "llm",
+        "api",
+        "openai",
+        "proxy",
+        "gateway",
+        "anthropic",
+        "ai"
+      ],
+      "stars": 20000,
+      "forks": 2500,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 60,
+      "readme": "## LiteLLM — Universal LLM Proxy\n\nCall 100+ LLMs with OpenAI format.\n\n### Quick Start\npip install litellm\n\n### Enterprise Features\n- Load balancing\n- Rate limiting\n- Cost tracking\n- Virtual keys\n\n### Demo\nTry our playground at demo.litellm.ai",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 75,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 85,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "videohao": {
+            "min": 70,
+            "max": 100
+          },
+          "wechat": {
+            "min": 70,
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "full_name": "OpenInterpreter/open-interpreter",
+      "name": "open-interpreter",
+      "description": "A natural language interface for computers. Let LLMs run code on your computer to complete tasks.",
+      "topics": [
+        "ai",
+        "llm",
+        "agent",
+        "code-interpreter",
+        "automation",
+        "python"
+      ],
+      "stars": 58000,
+      "forks": 5000,
+      "language": "Python",
+      "license": "AGPL-3.0",
+      "contributors_count": 40,
+      "readme": "## Open Interpreter\n\nNatural language interface for computers.\n\n### Installation\npip install open-interpreter\n\n### Quick Start\n```python\ninterpreter.chat('Plot AAPL stock')\n```\n\n### Demo\n![demo](demo.gif)\n\n### Use Cases\n- Data analysis\n- File operations\n- Web scraping\n- System automation",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 80,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 80,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "douyin": {
+            "min": 70,
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "full_name": "chatchat-space/Langchain-Chatchat",
+      "name": "Langchain-Chatchat",
+      "description": "基于Langchain和ChatGLM的本地知识库问答系统，支持中文企业级RAG应用。",
+      "topics": [
+        "rag",
+        "langchain",
+        "chatglm",
+        "knowledge-base",
+        "llm",
+        "chinese",
+        "ai"
+      ],
+      "stars": 32000,
+      "forks": 5000,
+      "language": "Python",
+      "license": "Apache-2.0",
+      "contributors_count": 15,
+      "readme": "## Langchain-Chatchat\n\n基于 Langchain 和 ChatGLM 的本地知识库问答系统。\n\n### 功能\n- 企业知识库问答\n- 中文文档理解\n- 多种LLM支持\n- 私有化部署\n\n### 安装\n```bash\ndocker-compose up -d\n```\n\n### Demo\n在线体验: demo.example.com\n\n### 应用场景\n- 企业内部知识管理\n- 客服系统\n- 文档智能问答",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 75,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 85,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "wechat": {
+            "min": 75,
+            "max": 100
+          },
+          "videohao": {
+            "min": 75,
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "full_name": "continuedev/continue",
+      "name": "continue",
+      "description": "Open-source AI code assistant. Connect any models and any context to build custom autocomplete and chat experiences inside your IDE.",
+      "topics": [
+        "ai",
+        "llm",
+        "code-assistant",
+        "ide",
+        "autocomplete",
+        "developer-tools"
+      ],
+      "stars": 25000,
+      "forks": 2000,
+      "language": "TypeScript",
+      "license": "Apache-2.0",
+      "contributors_count": 100,
+      "readme": "## Continue — AI Code Assistant\n\nOpen-source AI code assistant for your IDE.\n\n### Installation\nInstall from VS Code marketplace.\n\n### Quick Start\nConnect your favorite LLM (OpenAI, Anthropic, Ollama, etc.)\n\n### Features\n- Tab autocomplete\n- Chat with codebase\n- Custom slash commands\n- Multi-model support\n\n### Demo\n![demo](demo.gif)",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 75,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 80,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "geekan/MetaGPT",
+      "name": "MetaGPT",
+      "description": "Multi-agent framework that assigns different roles to GPTs to form a collaborative software company.",
+      "topics": [
+        "ai",
+        "agent",
+        "multi-agent",
+        "gpt",
+        "software-development",
+        "automation"
+      ],
+      "stars": 48000,
+      "forks": 5000,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 50,
+      "readme": "## MetaGPT — Multi-Agent Framework\n\nAssign different roles to GPTs to form a collaborative entity.\n\n### Installation\npip install metagpt\n\n### Quick Start\nmetagpt \"Write a snake game\"\n\n### Architecture\n- Product Manager agent\n- Architect agent\n- Engineer agent\n- QA agent\n\n### Demo\n![demo](demo.png)\n\n### Enterprise Use\n- Software prototyping\n- Requirement analysis\n- Code generation",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 75,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 80,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "danielmiessler/fabric",
+      "name": "fabric",
+      "description": "fabric is an open-source framework for augmenting humans using AI. It provides a modular framework for solving specific problems using a crowdsourced set of AI prompts.",
+      "topics": [
+        "ai",
+        "prompt-engineering",
+        "llm",
+        "automation",
+        "cli",
+        "agent"
+      ],
+      "stars": 30000,
+      "forks": 3000,
+      "language": "Go",
+      "license": "MIT",
+      "contributors_count": 30,
+      "readme": "## Fabric — AI Augmentation Framework\n\nModular framework for augmenting humans using AI.\n\n### Installation\n```bash\ngo install github.com/danielmiessler/fabric@latest\n```\n\n### Quick Start\nfabric --pattern summarize_paper\n\n### Patterns\n- summarization\n- analysis\n- extraction\n- creation\n\n### Demo\n![demo](demo.gif)",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 75,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 80,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "CopilotKit/CopilotKit",
+      "name": "CopilotKit",
+      "description": "React UI + infrastructure for AI copilots. Build in-app AI chatbots, AI agents, AI textareas, and more.",
+      "topics": [
+        "ai",
+        "copilot",
+        "react",
+        "chatbot",
+        "agent",
+        "llm",
+        "ui"
+      ],
+      "stars": 15000,
+      "forks": 1500,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 25,
+      "readme": "## CopilotKit\n\nReact UI for AI copilots.\n\n### Installation\nnpm install @copilotkit/react-core\n\n### Quick Start\n```tsx\n<CopilotKit>\n  <YourApp />\n</CopilotKit>\n```\n\n### Demo\n![demo](demo.gif)\n\n### Enterprise\n- Custom AI copilots\n- In-app assistants\n- AI textareas",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 70,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 80,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "BuilderIO/gpt-crawler",
+      "name": "gpt-crawler",
+      "description": "Crawl a site to generate knowledge files to create your own custom GPT or RAG application.",
+      "topics": [
+        "ai",
+        "crawler",
+        "gpt",
+        "rag",
+        "scraper",
+        "knowledge-base"
+      ],
+      "stars": 20000,
+      "forks": 2000,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 10,
+      "readme": "## GPT Crawler\n\nCrawl websites to generate knowledge files for GPT/RAG.\n\n### Installation\nnpm install\n\n### Quick Start\nConfigure your target URL and run the crawler.\n\n### Use Cases\n- Build custom GPTs\n- RAG knowledge bases\n- Web to JSON for AI\n\n### Demo\n![demo](demo.gif)",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 75,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 75,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "geo_trade": {
+            "min": 65,
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "full_name": "stanford-oval/storm",
+      "name": "storm",
+      "description": "An LLM-powered knowledge curation system that researches a topic and generates a full-length report with citations.",
+      "topics": [
+        "ai",
+        "llm",
+        "research",
+        "rag",
+        "agent",
+        "knowledge"
+      ],
+      "stars": 18000,
+      "forks": 1500,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 12,
+      "readme": "## STORM — AI Research System\n\nLLM-powered knowledge curation and report generation.\n\n### Installation\npip install knowledge-storm\n\n### Quick Start\n```python\nfrom knowledge_storm import StormRunner\n```\n\n### Demo\nSee generated reports at storm.example.com\n\n### Use Cases\n- Automated research\n- Report generation\n- Literature review",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 75,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 80,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "katanaml/sparrow",
+      "name": "sparrow",
+      "description": "Data extraction with ML and LLM. Parse documents, invoices, receipts into structured JSON.",
+      "topics": [
+        "ai",
+        "llm",
+        "data-extraction",
+        "ocr",
+        "document-ai",
+        "rag"
+      ],
+      "stars": 8000,
+      "forks": 800,
+      "language": "Python",
+      "license": "Apache-2.0",
+      "contributors_count": 8,
+      "readme": "## Sparrow — Document AI\n\nData extraction with ML and LLM.\n\n### Installation\npip install sparrow-ml\n\n### Quick Start\nExtract data from PDFs, images, and documents.\n\n### Use Cases\n- Invoice parsing\n- Receipt extraction\n- Document understanding\n\n### Demo\n![demo](demo.png)",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 70,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 75,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "vanna-ai/vanna",
+      "name": "vanna",
+      "description": "AI-powered business intelligence. Ask questions to your database in natural language and get answers with charts.",
+      "topics": [
+        "ai",
+        "sql",
+        "business-intelligence",
+        "llm",
+        "rag",
+        "data"
+      ],
+      "stars": 12000,
+      "forks": 1000,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 15,
+      "readme": "## Vanna — AI Business Intelligence\n\nAsk questions in natural language, get SQL and charts.\n\n### Installation\npip install vanna\n\n### Quick Start\n```python\nvn.ask('What were our top 5 products last month?')\n```\n\n### Enterprise\n- Database-agnostic\n- Self-hosted\n- Custom training\n\n### Demo\n![demo](demo.gif)",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 70,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 80,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "videohao": {
+            "min": 70,
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "full_name": "activepieces/activepieces",
+      "name": "activepieces",
+      "description": "Open source no-code business automation. Alternative to Zapier. Automate workflows with AI.",
+      "topics": [
+        "automation",
+        "workflow",
+        "no-code",
+        "ai",
+        "business",
+        "open-source"
+      ],
+      "stars": 16000,
+      "forks": 1800,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 40,
+      "readme": "## Activepieces — No-Code Automation\n\nOpen source alternative to Zapier with AI capabilities.\n\n### Installation\n```bash\ndocker-compose up -d\n```\n\n### Demo\nTry at demo.activepieces.com\n\n### Features\n- AI-powered automation\n- Visual workflow builder\n- Webhook triggers\n- 200+ integrations\n\n### Enterprise\n- Self-hosted\n- SSO\n- Audit logs",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 70,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 80,
+          "max": 100
+        },
+        "platform_fit_ranges": {
+          "videohao": {
+            "min": 75,
+            "max": 100
+          }
+        }
+      }
+    },
+    {
+      "full_name": "FlowiseAI/Flowise",
+      "name": "Flowise",
+      "description": "Drag & drop UI to build your customized LLM flow. Build AI apps with visual low-code builder.",
+      "topics": [
+        "llm",
+        "ai",
+        "low-code",
+        "langchain",
+        "visual-builder",
+        "workflow"
+      ],
+      "stars": 35000,
+      "forks": 4000,
+      "language": "TypeScript",
+      "license": "Apache-2.0",
+      "contributors_count": 40,
+      "readme": "## Flowise — Low-Code LLM Apps\n\nDrag & drop UI to build LLM flows.\n\n### Installation\nnpm install -g flowise\n\n### Quick Start\nflowise start\n\n### Features\n- Visual builder\n- LangChain integration\n- API endpoints\n\n### Demo\n![demo](demo.png)",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 70,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 75,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "ggerganov/llama.cpp",
+      "name": "llama.cpp",
+      "description": "LLM inference in C/C++. Run Llama, Mistral, and other models locally on CPU.",
+      "topics": [
+        "llm",
+        "cpp",
+        "inference",
+        "ai",
+        "machine-learning",
+        "quantization"
+      ],
+      "stars": 75000,
+      "forks": 10000,
+      "language": "C++",
+      "license": "MIT",
+      "contributors_count": 200,
+      "readme": "## llama.cpp — LLM Inference in C/C++\n\nRun LLMs locally on CPU.\n\n### Installation\n```bash\nmake\n```\n\n### Quick Start\n./llama-cli -m model.gguf -p \"Hello\"\n\n### Features\n- Quantization\n- GPU acceleration\n- Server mode\n\n### Architecture\nSupports GGUF format with optimized inference kernels.",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 50,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 70,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "huggingface/transformers",
+      "name": "transformers",
+      "description": "Transformers: State-of-the-art Machine Learning for Pytorch, TensorFlow, and JAX.",
+      "topics": [
+        "machine-learning",
+        "nlp",
+        "deep-learning",
+        "pytorch",
+        "tensorflow",
+        "ai"
+      ],
+      "stars": 140000,
+      "forks": 28000,
+      "language": "Python",
+      "license": "Apache-2.0",
+      "contributors_count": 500,
+      "readme": "## Transformers\n\nState-of-the-art Machine Learning for PyTorch, TensorFlow, and JAX.\n\n### Installation\npip install transformers\n\n### Quick Start\n```python\nfrom transformers import pipeline\nclassifier = pipeline('sentiment-analysis')\n```\n\n### Architecture\nPre-trained models for NLP, vision, audio.\n\n### Models\nBERT, GPT, T5, Llama, and thousands more.",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 50,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 70,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "apache/airflow",
+      "name": "airflow",
+      "description": "Apache Airflow - A platform to programmatically author, schedule, and monitor workflows.",
+      "topics": [
+        "workflow",
+        "automation",
+        "scheduler",
+        "python",
+        "data-engineering",
+        "pipeline"
+      ],
+      "stars": 40000,
+      "forks": 16000,
+      "language": "Python",
+      "license": "Apache-2.0",
+      "contributors_count": 400,
+      "readme": "## Apache Airflow\n\nProgrammatically author, schedule, and monitor workflows.\n\n### Installation\npip install apache-airflow\n\n### Quick Start\nairflow standalone\n\n### Architecture\n- DAG-based workflow definition\n- Scheduler\n- Web UI\n- Executors\n\n### Enterprise\n- Kubernetes executor\n- Multi-tenant\n- RBAC",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "medium",
+        "repo_selection_score": {
+          "min": 50,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 70,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "PrefectHQ/prefect",
+      "name": "prefect",
+      "description": "Prefect is a workflow orchestration framework for building resilient data pipelines in Python.",
+      "topics": [
+        "workflow",
+        "automation",
+        "orchestration",
+        "python",
+        "data",
+        "pipeline"
+      ],
+      "stars": 19000,
+      "forks": 1800,
+      "language": "Python",
+      "license": "Apache-2.0",
+      "contributors_count": 100,
+      "readme": "## Prefect\n\nWorkflow orchestration for data pipelines.\n\n### Installation\npip install prefect\n\n### Quick Start\n```python\nfrom prefect import flow, task\n```\n\n### Architecture\n- Task-based flows\n- Cloud orchestration\n- Retry and error handling\n\n### Enterprise\n- Prefect Cloud\n- Self-hosted server\n- RBAC",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 50,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 70,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "milvus-io/milvus",
+      "name": "milvus",
+      "description": "Milvus is a high-performance, cloud-native vector database built for scalable similarity search and AI applications.",
+      "topics": [
+        "vector-database",
+        "similarity-search",
+        "ai",
+        "embeddings",
+        "rag",
+        "database"
+      ],
+      "stars": 33000,
+      "forks": 3000,
+      "language": "Go",
+      "license": "Apache-2.0",
+      "contributors_count": 70,
+      "readme": "## Milvus — Vector Database\n\nCloud-native vector database for AI.\n\n### Installation\ndocker-compose up -d\n\n### Quick Start\n```python\nfrom pymilvus import Collection\n```\n\n### Architecture\n- Distributed\n- GPU-accelerated\n- Multiple index types\n\n### Enterprise\n- Cloud-native\n- Kubernetes\n- Multi-replica",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 50,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 70,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "deepset-ai/haystack",
+      "name": "haystack",
+      "description": "Haystack is an open source NLP framework to build LLM applications with an orchestration pipeline.",
+      "topics": [
+        "nlp",
+        "rag",
+        "llm",
+        "search",
+        "question-answering",
+        "ai"
+      ],
+      "stars": 20000,
+      "forks": 2000,
+      "language": "Python",
+      "license": "Apache-2.0",
+      "contributors_count": 45,
+      "readme": "## Haystack — NLP Framework\n\nBuild production-ready LLM applications.\n\n### Installation\npip install haystack-ai\n\n### Quick Start\n```python\nfrom haystack import Pipeline\n```\n\n### Architecture\n- Component-based pipeline\n- RAG pipelines\n- Agent pipelines\n\n### Enterprise\n- Self-hosted\n- API endpoints\n- Custom components",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 50,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 75,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "f/awesome-chatgpt-prompts",
+      "name": "awesome-chatgpt-prompts",
+      "description": "A collection of prompt examples to be used with the ChatGPT model. Curated prompts for various use cases.",
+      "topics": [
+        "chatgpt",
+        "prompts",
+        "awesome-list",
+        "ai",
+        "gpt"
+      ],
+      "stars": 120000,
+      "forks": 16000,
+      "language": "HTML",
+      "license": "CC0-1.0",
+      "contributors_count": 50,
+      "readme": "## Awesome ChatGPT Prompts\n\nA collection of prompt examples.\n\n### Prompts\n- Act as a Linux Terminal\n- Act as an English Translator\n- ...\n\nThis is a curated list of prompts for ChatGPT.",
+      "expected": {
+        "pool": "resource",
+        "content_type": "awesome_list",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 50,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "e2b-dev/awesome-ai-agents",
+      "name": "awesome-ai-agents",
+      "description": "A list of AI autonomous agents. Curated collection of agents, frameworks, and tools.",
+      "topics": [
+        "awesome-list",
+        "ai-agents",
+        "ai",
+        "agent"
+      ],
+      "stars": 15000,
+      "forks": 1500,
+      "language": "Markdown",
+      "license": "MIT",
+      "contributors_count": 15,
+      "readme": "## Awesome AI Agents\n\nA curated list of AI autonomous agents.\n\n### Categories\n- Frameworks\n- Tools\n- Research\n\n### Agents Listed\nAutoGPT, BabyAGI, CrewAI, and more...",
+      "expected": {
+        "pool": "resource",
+        "content_type": "awesome_list",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 50,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "dair-ai/Prompt-Engineering-Guide",
+      "name": "Prompt-Engineering-Guide",
+      "description": "Guides, papers, lecture, notebooks and resources for prompt engineering in LLMs.",
+      "topics": [
+        "prompt-engineering",
+        "llm",
+        "guide",
+        "tutorial",
+        "ai"
+      ],
+      "stars": 55000,
+      "forks": 5000,
+      "language": "Jupyter Notebook",
+      "license": "MIT",
+      "contributors_count": 20,
+      "readme": "## Prompt Engineering Guide\n\nResources for prompt engineering.\n\n### Contents\n- Introduction to Prompt Engineering\n- Techniques\n- Applications\n- Papers\n\n### Guides\nZero-shot, few-shot, chain-of-thought, and more.",
+      "expected": {
+        "pool": "resource",
+        "content_type": "tutorial_guide",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 50,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "ouckah/awesome-ai-agents",
+      "name": "awesome-ai-agents",
+      "description": "A curated list of awesome AI agents and agentic tools. Frameworks, platforms, and research.",
+      "topics": [
+        "awesome-list",
+        "ai",
+        "agent",
+        "llm",
+        "collection"
+      ],
+      "stars": 5000,
+      "forks": 500,
+      "language": "Markdown",
+      "license": "",
+      "contributors_count": 3,
+      "readme": "## Awesome AI Agents\n\nCurated list of AI agents.\n\n### Frameworks\n- LangChain\n- CrewAI\n- AutoGPT\n\n### Tools\n- browser-use\n- Composio\n- ...",
+      "expected": {
+        "pool": "resource",
+        "content_type": "awesome_list",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 40,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "ai-collection/ai-collection",
+      "name": "ai-collection",
+      "description": "A collection of awesome generative AI applications. Directory of AI tools and apps.",
+      "topics": [
+        "awesome-list",
+        "ai",
+        "generative-ai",
+        "collection",
+        "tools"
+      ],
+      "stars": 8000,
+      "forks": 800,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 15,
+      "readme": "## AI Collection\n\nDirectory of generative AI applications.\n\n### Categories\n- Chat\n- Image Generation\n- Video\n- Audio\n- Code\n\n### Apps Listed\nChatGPT, Midjourney, Stable Diffusion, and hundreds more.",
+      "expected": {
+        "pool": "resource",
+        "content_type": "awesome_list",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 40,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "EbookFoundation/free-programming-books",
+      "name": "free-programming-books",
+      "description": "Freely available programming books. A massive collection of learning resources.",
+      "topics": [
+        "books",
+        "education",
+        "programming",
+        "learning",
+        "resource"
+      ],
+      "stars": 350000,
+      "forks": 62000,
+      "language": "HTML",
+      "license": "CC-BY-4.0",
+      "contributors_count": 150,
+      "readme": "## Free Programming Books\n\nFreely available programming books.\n\n### Languages\n- Python\n- JavaScript\n- Java\n- C++\n\n### Subjects\n- Algorithms\n- Machine Learning\n- ...",
+      "expected": {
+        "pool": "resource",
+        "content_type": "awesome_list",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 30,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "papers-we-love/papers-we-love",
+      "name": "papers-we-love",
+      "description": "Papers from the computer science community to read and discuss. Academic paper collection.",
+      "topics": [
+        "papers",
+        "computer-science",
+        "reading",
+        "research",
+        "academic"
+      ],
+      "stars": 92000,
+      "forks": 6000,
+      "language": "Shell",
+      "license": "",
+      "contributors_count": 80,
+      "readme": "## Papers We Love\n\nAcademic papers from the CS community.\n\n### Topics\n- Machine Learning\n- Systems\n- Programming Languages\n- ...\n\n### How to Use\nRead, discuss, present.",
+      "expected": {
+        "pool": "resource",
+        "content_type": "awesome_list",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 30,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "iperov/DeepFaceLab",
+      "name": "DeepFaceLab",
+      "description": "DeepFaceLab is the leading software for creating deepfakes. Face swapping tool for videos.",
+      "topics": [
+        "deepfake",
+        "face-swap",
+        "machine-learning",
+        "computer-vision"
+      ],
+      "stars": 50000,
+      "forks": 11000,
+      "language": "Python",
+      "license": "GPL-3.0",
+      "contributors_count": 5,
+      "readme": "## DeepFaceLab — Deepfake Creation\n\nLeading software for creating deepfakes.\n\n### Installation\nFollow setup guide.\n\n### Usage\nSwap faces in videos with deep learning.\n\n### Warning\nThis software can be used to create deceptive content.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "repo_selection_score": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "s0md3v/roop",
+      "name": "roop",
+      "description": "One-click deepfake (face swap). Take a video and replace the face with just one image.",
+      "topics": [
+        "deepfake",
+        "face-swap",
+        "ai",
+        "computer-vision"
+      ],
+      "stars": 29000,
+      "forks": 6000,
+      "language": "Python",
+      "license": "GPL-3.0",
+      "contributors_count": 3,
+      "readme": "## Roop — One-Click Deepfake\n\nReplace faces in videos with one click.\n\n### Installation\npip install roop\n\n### Usage\nSelect video and target face image. Click run.\n\n### Warning\nBe responsible. Face swapping without consent is illegal in many jurisdictions.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "repo_selection_score": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "CorentinJ/Real-Time-Voice-Cloning",
+      "name": "Real-Time-Voice-Cloning",
+      "description": "Clone a voice in 5 seconds to generate arbitrary speech in real-time. Voice deepfake tool.",
+      "topics": [
+        "voice-cloning",
+        "deep-learning",
+        "audio",
+        "speech",
+        "deepfake"
+      ],
+      "stars": 54000,
+      "forks": 9000,
+      "language": "Python",
+      "license": "MIT",
+      "contributors_count": 3,
+      "readme": "## Real-Time Voice Cloning\n\nClone a voice in 5 seconds.\n\n### Installation\npip install -r requirements.txt\n\n### Usage\nRecord 5 seconds of voice, generate arbitrary speech.\n\n### Warning\nVoice cloning can be used for impersonation and fraud.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "repo_selection_score": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "soxv/BlackEye-Phishing",
+      "name": "BlackEye-Phishing",
+      "description": "Ultimate phishing tool with 38 websites templates. Social engineering toolkit.",
+      "topics": [
+        "phishing",
+        "security",
+        "social-engineering",
+        "hacking"
+      ],
+      "stars": 3000,
+      "forks": 1000,
+      "language": "HTML",
+      "license": "",
+      "contributors_count": 2,
+      "readme": "## BlackEye — Phishing Toolkit\n\n38 website templates for phishing campaigns.\n\n### Usage\nCreate convincing fake login pages.\n\n### Warning\nPhishing is illegal. This tool is for educational purposes only.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "repo_selection_score": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "trustedsec/social-engineer-toolkit",
+      "name": "social-engineer-toolkit",
+      "description": "The Social-Engineer Toolkit (SET) — penetration testing framework for social engineering attacks.",
+      "topics": [
+        "security",
+        "social-engineering",
+        "penetration-testing",
+        "phishing"
+      ],
+      "stars": 11000,
+      "forks": 2500,
+      "language": "Python",
+      "license": "BSD-3-Clause",
+      "contributors_count": 10,
+      "readme": "## Social-Engineer Toolkit\n\nPenetration testing framework for social engineering.\n\n### Features\n- Spear phishing\n- Website attack vectors\n- Mass mailer\n\n### Usage\nFor authorized penetration testing only.\n\n### Warning\nUnauthorized use is illegal.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "repo_selection_score": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "secretscanner/credential-dumper",
+      "name": "credential-dumper",
+      "description": "Search and dump credentials from browser stores — Chrome, Firefox, Edge. Password recovery tool.",
+      "topics": [
+        "security",
+        "password",
+        "credential",
+        "recovery"
+      ],
+      "stars": 1500,
+      "forks": 300,
+      "language": "Python",
+      "license": "",
+      "contributors_count": 1,
+      "readme": "## Credential Dumper\n\nExtract saved passwords from browsers.\n\n### Supported Browsers\n- Chrome\n- Firefox\n- Edge\n\n### Usage\nFor recovering YOUR OWN passwords only.\n\n### Warning\nUsing this on others' computers is illegal.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "repo_selection_score": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "TheSpeedX/SMS-Bomber",
+      "name": "SMS-Bomber",
+      "description": "SMS and email bomber. Send bulk messages for testing or harassment.",
+      "topics": [
+        "sms",
+        "spam",
+        "bomber",
+        "tool"
+      ],
+      "stars": 2000,
+      "forks": 500,
+      "language": "Python",
+      "license": "",
+      "contributors_count": 1,
+      "readme": "## SMS Bomber\n\nSend bulk SMS messages.\n\n### Usage\npython bomber.py --target NUMBER --count 100\n\n### Warning\nSMS bombing is illegal. For educational use only.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "repo_selection_score": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "fake-author/spam-bot-net",
+      "name": "spam-bot-net",
+      "description": "Automated bot network for social media spam. Generate accounts and post spam content.",
+      "topics": [
+        "spam",
+        "bot",
+        "automation",
+        "social-media"
+      ],
+      "stars": 1000,
+      "forks": 200,
+      "language": "JavaScript",
+      "license": "",
+      "contributors_count": 1,
+      "readme": "## Spam Bot Network\n\nAutomated social media spam.\n\n### Features\n- Account generation\n- Auto-posting\n- Proxy support\n- Captcha bypass\n\n### Warning\nSpam operations violate platform ToS.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "repo_selection_score": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "the-ai-alliance/awesome-ai-agents",
+      "name": "awesome-ai-agents",
+      "description": "A curated list of awesome AI agent resources, frameworks, papers, and tools.",
+      "topics": [
+        "awesome-list",
+        "ai-agents",
+        "ai",
+        "collection"
+      ],
+      "stars": 3000,
+      "forks": 300,
+      "language": "Markdown",
+      "license": "",
+      "contributors_count": 5,
+      "readme": "## Awesome AI Agents\n\nCurated AI agent resources.\n\n### Contents\n- Frameworks\n- Research Papers\n- Open Source Agents\n- Commercial Tools",
+      "expected": {
+        "pool": "resource",
+        "content_type": "awesome_list",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 30,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "microsoft/TypeChat",
+      "name": "TypeChat",
+      "description": "TypeChat replaces prompt engineering with schema engineering. Define types and get structured JSON from LLMs.",
+      "topics": [
+        "ai",
+        "llm",
+        "typescript",
+        "schema",
+        "prompt-engineering",
+        "openai"
+      ],
+      "stars": 9000,
+      "forks": 400,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 15,
+      "readme": "## TypeChat — Schema-Based LLM Output\n\nReplace prompt engineering with schema engineering.\n\n### Installation\nnpm install typechat\n\n### Quick Start\nDefine your schema, get typed responses.\n\n### Demo\nTry the playground.\n\n### Enterprise\n- Reliable LLM integration\n- Type-safe API responses",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 65,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 75,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "langfuse/langfuse",
+      "name": "langfuse",
+      "description": "Open source LLM engineering platform. Observability, evaluations, prompts, and playground for LLM apps.",
+      "topics": [
+        "llm",
+        "observability",
+        "monitoring",
+        "ai",
+        "langchain",
+        "prompt-management"
+      ],
+      "stars": 8000,
+      "forks": 700,
+      "language": "TypeScript",
+      "license": "MIT",
+      "contributors_count": 20,
+      "readme": "## Langfuse — LLM Observability\n\nOpen source LLM engineering platform.\n\n### Installation\ndocker-compose up -d\n\n### Features\n- Tracing\n- Prompt management\n- Evaluation\n- Playground\n\n### Enterprise\n- Self-hosted\n- SSO\n- RBAC",
+      "expected": {
+        "pool": "top5",
+        "content_type": "runnable_project",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 65,
+          "max": 100
+        },
+        "business_value_score": {
+          "min": 75,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "hashicorp/terraform",
+      "name": "terraform",
+      "description": "Terraform enables you to safely and predictably create, change, and improve infrastructure.",
+      "topics": [
+        "infrastructure",
+        "iac",
+        "cloud",
+        "devops",
+        "automation"
+      ],
+      "stars": 45000,
+      "forks": 9700,
+      "language": "Go",
+      "license": "BUSL-1.1",
+      "contributors_count": 200,
+      "readme": "## Terraform — Infrastructure as Code\n\nSafely and predictably manage infrastructure.\n\n### Installation\nDownload from hashicorp.com\n\n### Quick Start\nterraform init\nterraform apply\n\n### Architecture\n- HCL configuration\n- Provider ecosystem\n- State management",
+      "expected": {
+        "pool": "evergreen",
+        "content_type": "framework_tool",
+        "risk_overall": "low",
+        "repo_selection_score": {
+          "min": 30,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "powershell-empire/empire",
+      "name": "empire",
+      "description": "Empire is a post-exploitation framework for stealthy lateral movement and data exfiltration.",
+      "topics": [
+        "security",
+        "exploit",
+        "post-exploitation",
+        "red-team",
+        "hacking"
+      ],
+      "stars": 8000,
+      "forks": 2000,
+      "language": "Python",
+      "license": "BSD-3-Clause",
+      "contributors_count": 10,
+      "readme": "## Empire — Post-Exploitation Framework\n\nPost-exploitation framework with PowerShell and Python agents.\n\n### Features\n- Lateral movement\n- Credential theft\n- Data exfiltration\n\n### Warning\nFor authorized red team operations only. Unauthorized use is illegal.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "repo_selection_score": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    },
+    {
+      "full_name": "brannondorsey/mitm-router-bypass",
+      "name": "mitm-router-bypass",
+      "description": "Man-in-the-middle tool that bypasses router security. Intercept and modify network traffic.",
+      "topics": [
+        "security",
+        "network",
+        "bypass",
+        "mitm",
+        "hacking"
+      ],
+      "stars": 2000,
+      "forks": 400,
+      "language": "Python",
+      "license": "",
+      "contributors_count": 1,
+      "readme": "## MITM Router Bypass\n\nIntercept and modify network traffic by bypassing router security.\n\n### Usage\nRun on local network to intercept traffic.\n\n### Warning\nIntercepting network traffic without authorization is illegal in most jurisdictions.",
+      "expected": {
+        "pool": "blocked",
+        "content_type": "high_risk",
+        "risk_overall": "blocked",
+        "repo_selection_score": {
+          "min": 0,
+          "max": 100
+        }
+      }
+    }
+  ],
+  "total": 80
+}
