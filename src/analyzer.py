@@ -299,6 +299,20 @@ def _derive_risk_boundaries(repo: ScoredRepo) -> list[str]:
             "禁止用于抓取登录/付费墙后内容（除非有合法授权）",
         ])
 
+    # browser-use specific: browser automation is high-risk
+    is_browser_automation = (
+        "browser" in str(repo.full_name).lower()
+        or any(k in topics for k in ("browser-automation", "browser", "playwright", "selenium"))
+    )
+    if is_browser_automation:
+        boundaries.extend([
+            "可以用于公开网页检查、授权流程辅助、页面信息整理和人工确认后的重复操作自动化",
+            "不得用于绕过登录、验证码、风控、平台限制、隐私保护或服务条款",
+            "不得用于批量注册、刷量、爬取隐私数据、自动化骚扰",
+            "涉及账号操作、登录页面、平台条款、隐私数据、验证码、风控系统均需人工确认",
+            "不能保证 GEO 排名、AI 引用或询盘增长",
+        ])
+
     if "agpl" in license_name or "gpl" in license_name:
         boundaries.append(f"{repo.license} 许可证有 Copyleft 限制，商用需评估")
 

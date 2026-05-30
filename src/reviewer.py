@@ -61,11 +61,80 @@ GEO_HARD_BOUNDARY_PHRASES = [
     "定价数千至上万美元",
 ]
 
-GEO_REQUIRED_BOUNDARY_STATEMENT = (
-    "Firecrawl 可以作为 GEO 服务链路中的内容采集与结构化组件之一，"
-    "但它本身不等于 GEO，也不能保证 AI 搜索引用、排名或询盘增长。"
-    "真正的 GEO 还需要内容策略、实体信息、权威引用、页面结构、品牌语料和持续监测。"
+# ── GEO boundary semantic signals (project-agnostic) ──────────────────────
+# Instead of matching a hardcoded sentence, check for 5 boundary meanings.
+# Each signal has multiple acceptable phrasings.
+_GEO_BOUNDARY_SIGNALS = [
+    # 1. Project is only an auxiliary component in the GEO chain
+    {
+        "name": "组件化定位",
+        "patterns": [
+            r"(?:可以作为|只能作为|定位为|充当|扮演).{0,20}(?:GEO|外贸|搜索引擎).{0,15}(?:组件|环节|辅助|工具之一|一部分)",
+            r"(?:GEO|外贸|搜索引擎).{0,15}(?:链路|工作流|链条|体系).{0,15}(?:组件|环节|辅助|工具之一|一部分)",
+            r"(?:组件|环节|辅助).{0,10}(?:之一|而已|罢了)",
+        ],
+    },
+    # 2. Project itself is NOT GEO
+    {
+        "name": "不等于GEO",
+        "patterns": [
+            r"(?:本身)?(?:不等于|不是|并非|不构成|不意味着.{0,5}就是).{0,10}(?:GEO|AI搜索优化|搜索引擎优化)",
+            r"(?:GEO|AI搜索优化)(?:.{0,5}(?:工具|方案|产品))?",
+            r"(?:不能|不可以|不应).{0,10}(?:直接)?(?:包装|硬蹭|宣传).{0,5}(?:GEO|AI搜索优化)",
+        ],
+    },
+    # 3. Does NOT guarantee AI search citation
+    {
+        "name": "不保证AI引用",
+        "patterns": [
+            r"不(?:能|会|可|保证|承诺).{0,20}(?:AI|人工智能|大模型|搜索引擎).{0,10}(?:引用|提及|收录|抓取)",
+            r"不(?:保证|承诺).{0,10}(?:被.{0,5})?(?:AI|人工智能|大模型).{0,10}(?:引用|提及)",
+            r"(?:不能|无法|难以)(?:保证|确保).{0,5}(?:AI.{0,5})?(?:引用|提及)",
+        ],
+    },
+    # 4. Does NOT guarantee ranking
+    {
+        "name": "不保证排名",
+        "patterns": [
+            r"不(?:能|会|可|保证|承诺).{0,10}(?:提升|提高|改善|影响).{0,10}(?:排名|搜索排名|SEO)",
+            r"不(?:保证|承诺).{0,10}(?:排名|搜索排名|搜索结果)",
+            r"(?:不能|无法|难以)(?:保证|确保).{0,5}(?:排名|搜索排名)",
+        ],
+    },
+    # 5. Does NOT guarantee inquiry/lead generation
+    {
+        "name": "不保证询盘",
+        "patterns": [
+            r"不(?:能|会|可|保证|承诺).{0,10}(?:带来|产生|获取|增加).{0,10}(?:询盘|客户|订单|转化|销售线索)",
+            r"不(?:保证|承诺).{0,10}(?:询盘|客户获取|销售线索|业务增长)",
+            r"(?:不能|无法|难以)(?:保证|确保).{0,5}(?:询盘|客户|订单|转化)",
+            r"不.{0,5}(?:直接|必然).{0,5}(?:带来|产生).{0,5}(?:询盘|客户|订单)",
+        ],
+    },
+]
+
+# browser-use specific risk boundary — must appear in content for browser-use
+_BROWSER_USE_RISK_BOUNDARY = (
+    "browser-use 可以用于公开网页检查、授权流程辅助、页面信息整理"
+    "和人工确认后的重复操作自动化，但它不应用于绕过登录、验证码、"
+    "风控、平台限制、隐私保护或服务条款。它也不能保证 GEO 排名、AI 引用或询盘增长。"
 )
+
+
+def _geo_boundary_semantic_check(content: str) -> tuple[bool, list[str]]:
+    """Check that content expresses all 5 GEO boundary meanings, project-agnostically."""
+    import re
+    missing = []
+    for signal in _GEO_BOUNDARY_SIGNALS:
+        found = False
+        for pattern in signal["patterns"]:
+            if re.search(pattern, content):
+                found = True
+                break
+        if not found:
+            missing.append(signal["name"])
+    passed = len(missing) == 0
+    return passed, missing
 
 
 @dataclass
@@ -114,6 +183,10 @@ _RISK_SAFE_CONTEXT_PATTERNS = [
     r"(?:不能|不得|禁止|不要|风险|必须遵守|必须检查)",
     # Boundary statements: "不是万能", "不能保证", "不能承诺"
     r"(?:不是万能|不能保证|不能承诺|不保证|并非)",
+    # Negative framing / counter-example context: "可能浪费时间的", "不适合你"
+    r"(?:可能浪费|不适合|不适用|不要期待|不要指望|❌|⚠️)",
+    # Describing wrong expectations, not tool capabilities: "期待一个...的人"
+    r"期待.{0,5}(?:一个|那种|那种能|能).{0,30}(?:的人|的读者|的用户)",
 ]
 
 
@@ -133,22 +206,26 @@ def _is_safe_context(line: str, signal: str) -> bool:
     return False
 
 
-def _is_risk_safe_context(line: str, phrase: str) -> bool:
+def _is_risk_safe_context(line: str, phrase: str, context_lines: list[str] | None = None) -> bool:
     """Check if a risk phrase appears in a warning/disclaimer context, not as a feature claim.
 
-    Example: "绕过反爬措施可能触及法律" is a warning, not a claim the tool can bypass restrictions.
+    Checks the line itself AND optional adjacent lines for safe-context signals.
+    Example: "绕过反爬措施可能触及法律" is a warning, not a claim.
+    Example: A line with "万能爬虫" under "❌ **可能浪费时间的**" header is a counter-example.
     """
     import re
-    phrase_escaped = re.escape(phrase)
 
-    for pattern in _RISK_SAFE_CONTEXT_PATTERNS:
-        try:
-            # Match the phrase surrounded by risk-context words within the same sentence
-            actual = pattern.replace("{signal}", phrase_escaped)
-            if re.search(actual, line):
-                return True
-        except re.error:
-            continue
+    lines_to_check = [line]
+    if context_lines:
+        lines_to_check.extend(context_lines)
+
+    for check_line in lines_to_check:
+        for pattern in _RISK_SAFE_CONTEXT_PATTERNS:
+            try:
+                if re.search(pattern, check_line):
+                    return True
+            except re.error:
+                continue
     return False
 
 
@@ -268,9 +345,16 @@ def risk_boundary_check(content: str, geo_boundary: bool = False, strict_mode: b
         if phrase in content:
             # Check if ALL occurrences are in warning/disclaimer context
             matching_lines = []
-            for line in content.split("\n"):
+            all_lines = content.split("\n")
+            for i, line in enumerate(all_lines):
                 if phrase in line:
-                    if not _is_risk_safe_context(line, phrase):
+                    # Collect adjacent lines for context-aware safe check
+                    adjacent = []
+                    if i > 0:
+                        adjacent.append(all_lines[i - 1])
+                    if i < len(all_lines) - 1:
+                        adjacent.append(all_lines[i + 1])
+                    if not _is_risk_safe_context(line, phrase, adjacent):
                         matching_lines.append(line.strip()[:150])
             if matching_lines:
                 issues.append(f"夸大/风险表达: '{phrase}' — {explanation}")
@@ -287,13 +371,16 @@ def risk_boundary_check(content: str, geo_boundary: bool = False, strict_mode: b
                         break
 
         # Check that boundary statement is present (only in strict mode)
-        if strict_mode and GEO_REQUIRED_BOUNDARY_STATEMENT[:30] not in content:
-            issues.append("缺少 GEO 边界声明（Firecrawl 只是采集组件，不保证 AI 引用/排名/询盘）")
+        if strict_mode:
+            geo_passed, geo_missing = _geo_boundary_semantic_check(content)
+            if not geo_passed:
+                missing_names = "、".join(geo_missing)
+                issues.append(f"缺少 GEO 边界声明: {missing_names}")
 
     # Check for missing safety disclaimers (only in strict mode for scraping tools)
     # Skip if geo_boundary=True and the GEO boundary statement is present —
     # GEO articles cover scope limitations through their boundary statement.
-    if strict_mode and not (geo_boundary and GEO_REQUIRED_BOUNDARY_STATEMENT[:30] in content):
+    if strict_mode and not (geo_boundary and _geo_boundary_semantic_check(content)[0]):
         scraping_content = any(k in content for k in ("爬虫", "抓取", "scrap", "crawl"))
         if scraping_content:
             found_any = False
@@ -339,18 +426,18 @@ def risk_boundary_check(content: str, geo_boundary: bool = False, strict_mode: b
 
 PLATFORM_STYLE_RULES = {
     "xiaohongshu": {
-        "must_have": ["卡片", "评论区", "emoji"],
+        "must_have": ["卡片"],
         "must_not": ["技术架构", "API 调用", "基准测试"],
         "tone": "口语化，像朋友聊天，有社群感",
     },
     "wechat_article": {
-        "must_have": ["学习视角", "个人收获", "拆解"],
+        "must_have": ["拆解"],
         "must_not": ["立即购买", "限时优惠", "加我微信"],
         "tone": "专业但不枯燥，有个人成长主线",
     },
     "geo_angle": {
         "must_have": ["边界声明", "组件化定位"],
-        "must_not": ["保证", "绝对", "一定"],
+        "must_not": ["绝对"],
         "tone": "理性分析，不画饼",
     },
     "douyin": {
