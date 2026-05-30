@@ -121,6 +121,28 @@ _GEO_BOUNDARY_SIGNALS = [
     },
 ]
 
+# ── Template / placeholder detection (Publication Readiness Gate) ──────────
+# If any core content file matches these, recommendation must NOT be "yes".
+_TEMPLATE_PLACEHOLDER_PATTERNS = [
+    (r"\[TODO:\s*LLM\]", "检测到 [TODO: LLM] 占位符，内容未通过 LLM 生成"),
+    (r"No-LLM\s+fallback", "检测到 No-LLM fallback 标记，内容为模板占位"),
+    (r"source_status:\s*degraded", "检测到 source_status: degraded 标记，生成失败"),
+    (r"> 模式：No-LLM", "检测到 No-LLM 模式标记，内容为模板占位"),
+    (r"需要\s*LLM\s*(?:深度拓展|生成完整文章)", "检测到 LLM 依赖标记，内容不完整"),
+    (r"> 模式：No-LLM fallback", "检测到 No-LLM fallback 模式，需 LLM 重新生成"),
+]
+
+
+def _check_template_placeholders(content: str) -> list[str]:
+    """Check for template/fallback placeholders indicating incomplete content."""
+    import re
+    issues = []
+    for pattern, explanation in _TEMPLATE_PLACEHOLDER_PATTERNS:
+        if re.search(pattern, content):
+            issues.append(explanation)
+    return issues
+
+
 # browser-use specific risk boundary — must appear in content for browser-use
 _BROWSER_USE_RISK_BOUNDARY = (
     "browser-use 可以用于公开网页检查、授权流程辅助、页面信息整理"
@@ -544,6 +566,21 @@ def quality_review(
 
         content = fpath.read_text(encoding="utf-8")
         fr = FileReview(file_name=fname)
+
+        # Check 0: Template placeholder detection (Publication Readiness Gate)
+        # If content has [TODO: LLM] / No-LLM fallback / degraded markers,
+        # it is NOT publishable regardless of other check results.
+        placeholder_issues = _check_template_placeholders(content)
+        if placeholder_issues:
+            fr.needs_regeneration = True
+            fr.checks.append(CheckResult(
+                check_name="publication_readiness",
+                passed=False, score=0,
+                issues=placeholder_issues,
+                detail=f"检测到 {len(placeholder_issues)} 个模板占位符，内容不完整",
+            ))
+            for issue in placeholder_issues:
+                blocking_issues.append(f"{fname}: {issue}")
 
         # Check 1: Repo consistency (core)
         c1 = repo_consistency_check(content, repo_full_name, unsupported)

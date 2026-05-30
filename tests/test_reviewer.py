@@ -213,3 +213,98 @@ class TestRunReviewerPipeline:
 
         # Short script without disclaimers should pass in non-strict mode
         assert outcome.passed
+
+
+class TestPublicationReadinessGate:
+    """Phase 11.6: Publication readiness gate — template placeholder detection."""
+
+    def test_template_placeholder_detected(self):
+        """_check_template_placeholders should detect [TODO: LLM] and No-LLM fallback."""
+        from src.reviewer import _check_template_placeholders
+
+        # Content with TODO markers
+        content = "# Test\n\n[TODO: LLM — 200-300 字]\n\n## Section\n\n[TODO: LLM]"
+        issues = _check_template_placeholders(content)
+        assert len(issues) >= 1
+        assert any("TODO" in i for i in issues)
+
+    def test_clean_content_no_placeholders(self):
+        """Clean LLM-generated content should have no placeholder issues."""
+        from src.reviewer import _check_template_placeholders
+
+        content = "# browser-use 深度拆解\n\n这是一个 AI Agent 的浏览器操作工具。\n\n## 核心能力\n\n..."
+        issues = _check_template_placeholders(content)
+        assert len(issues) == 0
+
+    def test_quality_review_rejects_template_wechat(self):
+        """quality_review must return revise_first/no when 05 has [TODO: LLM] placeholders."""
+        import tempfile
+        import os
+        from pathlib import Path
+        from src.reviewer import quality_review
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pack_dir = Path(tmpdir)
+
+            # Write 05_wechat_article with template placeholders
+            wechat_content = (
+                "# 公众号长文草稿\n\n"
+                "> 模式：No-LLM fallback — 需要 LLM 生成完整文章\n\n"
+                "## 标题建议\n\n"
+                "1. [TODO: LLM]\n"
+                "2. [TODO: LLM]\n\n"
+                "### 为什么这个项目值得看\n\n"
+                "[TODO: LLM — 200-300 字]\n"
+            )
+            (pack_dir / "05_wechat_article.md").write_text(wechat_content, encoding="utf-8")
+
+            # Write clean content for other required files
+            for fname in [
+                "01_ai_fde_deep_analysis.md", "02_xiaohongshu.md",
+                "03_douyin_video.md", "04_videohao_script.md",
+                "07_geo_angle.md", "09_risk_review.md",
+            ]:
+                clean = f"# {fname}\n\n这是一个关于 browser-use 的深度分析文章。\n\n## 风险边界\n\n使用前请遵守 robots.txt 和服务条款。本项目不保证排名、AI 引用或询盘。\n"
+                (pack_dir / fname).write_text(clean, encoding="utf-8")
+
+            report = quality_review(pack_dir, "browser-use/browser-use")
+
+            # Must NOT be "yes" when a core file has template placeholders
+            assert report.publish_recommendation != "yes", (
+                f"Expected revise_first or no, got {report.publish_recommendation}"
+            )
+            assert report.publish_recommendation in ("revise_first", "no")
+            # Must have at least 1 blocking issue
+            assert len(report.blocking_issues) >= 1
+            # 05 must be flagged
+            assert any("05_wechat_article" in b for b in report.blocking_issues)
+
+    def test_quality_review_yes_when_all_clean(self):
+        """quality_review should return yes when ALL files are clean LLM content."""
+        import tempfile
+        from pathlib import Path
+        from src.reviewer import quality_review
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pack_dir = Path(tmpdir)
+
+            clean_content = (
+                "# browser-use 深度拆解\n\n"
+                "这是一个 AI Agent 浏览器操作工具。\n\n"
+                "## 风险边界\n\n"
+                "使用前请遵守 robots.txt 和服务条款。\n"
+                "本项目不等于 GEO，不能保证 AI 搜索引用、排名或询盘增长。\n"
+                "它可以作为 GEO 服务链路中的组件之一。\n"
+            )
+
+            for fname in [
+                "01_ai_fde_deep_analysis.md", "02_xiaohongshu.md",
+                "03_douyin_video.md", "04_videohao_script.md",
+                "05_wechat_article.md", "07_geo_angle.md", "09_risk_review.md",
+            ]:
+                (pack_dir / fname).write_text(clean_content, encoding="utf-8")
+
+            report = quality_review(pack_dir, "browser-use/browser-use")
+            # With all clean files, should be yes (or revise_first if minor issues)
+            assert report.publish_recommendation in ("yes", "revise_first")
+            assert len(report.blocking_issues) == 0
