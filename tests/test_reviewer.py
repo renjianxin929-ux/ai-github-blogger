@@ -568,3 +568,206 @@ class TestCrossProjectBoundary:
         result = risk_boundary_check(content, project_type="generic")
         assert not result.passed
         assert len(result.issues) >= 1
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Phase 14: Semantic boundary detection — smarter reviewer, not looser
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestSemanticBoundaryDetection:
+    """Verify semantic boundary detection catches equivalent expressions."""
+
+    def test_xiaohongshu_with_semantic_boundaries_passes(self):
+        """02_xiaohongshu with 不是万能/不能绕过登录/需人工复核 should pass."""
+        from src.reviewer import risk_boundary_check
+
+        content = (
+            "### 卡片5 — 边界提醒\n"
+            "⚠️ 诚实说：\n"
+            "- 它遵守 robots.txt，不会强行爬取不允许的内容\n"
+            "- 不能绕过登录、验证码、付费墙\n"
+            "- 抓取的版权内容需自行确认授权\n"
+            "- 项目采用 AGPL-3.0 协议，商业闭源使用要小心\n"
+            "**不是万能工具，是需要合规使用的基建。**\n"
+            "\n"
+            "### 卡片7 — 适合谁看\n"
+            "**适合**：正在搭建 AI Agent 的开发者\n"
+            "需要人工复核内容后再发布\n"
+        )
+        result = risk_boundary_check(
+            content, project_type="web_scraping_api", strict_mode=True,
+        )
+        assert result.passed, (
+            f"Should pass with semantic boundaries, got score={result.score}, "
+            f"passed={result.passed}, issues={result.issues}"
+        )
+        assert result.score >= 70
+
+    def test_geo_angle_with_semantic_boundaries_passes(self):
+        """07_geo_angle with 只是组件/不等于GEO/不保证排名 should pass."""
+        from src.reviewer import risk_boundary_check
+
+        content = (
+            "# Firecrawl 外贸/GEO 角度分析\n\n"
+            "## 结合判断\n"
+            "这个项目是 GEO 服务链路中一个关键的内容采集与结构化组件，"
+            "但它本身不等于 GEO，不是完整的 SEO 方案。\n\n"
+            "## 外贸客户能不能用\n"
+            "能用，且很实用。但需要注意：\n"
+            "- 不保证 AI 引用、排名或询盘增长\n"
+            "- 不能绕过登录、验证码、付费墙\n"
+            "- 需要遵守 robots.txt 和网站服务条款\n"
+            "- 抓取的版权内容（如文章、图片）需自行确认授权\n"
+            "- 涉及用户数据时需注意隐私合规\n"
+            "- 不能替代专业 GEO 策略和人工判断\n"
+            "**它不是万能的数据采集器，受限于目标网站的页面结构和反爬策略。**\n"
+        )
+        result = risk_boundary_check(
+            content, project_type="web_scraping_api", strict_mode=True,
+        )
+        assert result.passed, (
+            f"Should pass with semantic GEO boundaries, got score={result.score}, "
+            f"passed={result.passed}, issues={result.issues}"
+        )
+        assert result.score >= 70
+
+    def test_exaggerated_claims_still_blocked(self):
+        """万能爬虫/绕过限制/保证排名增长 must still be blocked."""
+        from src.reviewer import risk_boundary_check
+
+        content = (
+            "Firecrawl 是一个万能爬虫，可以绕过所有反爬限制，"
+            "自动登录任何网站后台，保证拿到全部数据。"
+            "使用它保证你的 AI 搜索排名增长 300%。"
+        )
+        result = risk_boundary_check(
+            content, project_type="web_scraping_api", strict_mode=True,
+        )
+        assert not result.passed, (
+            f"Exaggerated claims MUST be blocked, got passed={result.passed}"
+        )
+        assert len(result.issues) >= 3, (
+            f"Should have ≥3 issues for 万能爬虫+绕过限制+保证排名, got {len(result.issues)}"
+        )
+
+    def test_safe_context_phrases_not_falsely_blocked(self):
+        """Blocking phrases in disclaimer context must NOT cause false blocking."""
+        from src.reviewer import risk_boundary_check
+
+        content = (
+            "# 风险边界\n\n"
+            "⚠️ 重要提醒：\n"
+            "- 不能保证抓取任意网页，受限于目标网站的反爬策略\n"
+            "- 不能绕过反爬限制——这不仅是技术问题，更是法律问题\n"
+            "- 不要期待它像万能爬虫一样工作——它不是，也不应该是\n"
+            "- 不能保证 AI 引用排名——那需要完整的 GEO 策略\n"
+            "- 不能承诺绕过登录验证——这不是该工具的定位\n"
+            "- 使用前请遵守目标网站的 robots.txt 和服务条款\n"
+            "- 抓取的内容可能涉及版权和隐私问题，需自行确认合规\n"
+        )
+        result = risk_boundary_check(
+            content, project_type="web_scraping_api", strict_mode=True,
+        )
+        assert result.passed, (
+            f"Safe-context disclaimers should pass, got passed={result.passed}, "
+            f"score={result.score}, issues={result.issues}"
+        )
+        assert result.score >= 70
+
+    def test_no_contradiction_score100_but_degraded(self):
+        """When risk_boundary_check passes with high score, must not degrade."""
+        from src.reviewer import risk_boundary_check, run_reviewer_pipeline
+
+        content = (
+            "# Firecrawl 小红书内容\n\n"
+            "## 边界提醒\n"
+            "⚠️ 诚实说：\n"
+            "- 遵守 robots.txt 和版权条款\n"
+            "- 不能绕过登录、验证码、付费墙\n"
+            "- 不是万能工具\n"
+            "- 需要人工复核后发布\n"
+            "## 适合谁看\n"
+            "适合正在搭建 AI Agent 的开发者。\n"
+        )
+
+        ctx = {
+            "confirmed_features": ["网页抓取 API", "HTML→Markdown"],
+            "unsupported_features": ["知识库平台"],
+            "risk_boundaries": ["遵守 robots.txt"],
+        }
+
+        # Direct risk_boundary_check
+        c3 = risk_boundary_check(
+            content, project_type="web_scraping_api", strict_mode=True,
+        )
+        assert c3.passed, (
+            f"risk_boundary should pass, got passed={c3.passed}, score={c3.score}"
+        )
+
+        # run_reviewer_pipeline should also pass
+        outcome = run_reviewer_pipeline(
+            "02_xiaohongshu", content, "mendableai/firecrawl",
+            ctx=ctx, project_type="web_scraping_api", strict_mode=True,
+        )
+        assert outcome.passed, (
+            f"Pipeline should pass, got passed={outcome.passed}, "
+            f"failures={outcome.core_checks_failed}"
+        )
+        assert not outcome.needs_regeneration, (
+            f"Should NOT need regeneration, score={c3.score}, issues={c3.issues}"
+        )
+
+    def test_full_llm_content_not_misidentified_as_fallback(self):
+        """Full LLM content must not trigger template placeholder detection."""
+        from src.reviewer import _check_template_placeholders
+
+        content = (
+            "# Firecrawl 深度拆解\n\n"
+            "今天拆了一个项目，126K stars 的网页抓取 API。\n\n"
+            "## 风险边界\n\n"
+            "遵守 robots.txt，注意版权合规，不能绕过登录验证。\n"
+            "不是万能工具——它只是 AI 数据链路中的一个组件。\n"
+        )
+        issues = _check_template_placeholders(content)
+        assert len(issues) == 0, (
+            f"Full LLM content should have 0 placeholder issues, got: {issues}"
+        )
+
+    def test_quality_review_accepts_semantic_boundary_content(self):
+        """quality_review should return yes when files have semantic boundaries."""
+        import tempfile
+        from pathlib import Path
+        from src.reviewer import quality_review
+
+        content = (
+            "# Firecrawl 深度分析\n\n"
+            "## 风险边界\n"
+            "⚠️ 重要：\n"
+            "- 遵守目标网站的 robots.txt 和服务条款\n"
+            "- 不能绕过登录、验证码、付费墙或风控措施\n"
+            "- 不是万能工具，受限于页面结构和反爬策略\n"
+            "- 不保证 AI 引用、排名或询盘增长\n"
+            "- 抓取的内容可能受版权保护，商用前需确认授权\n"
+            "- 涉及用户数据时需注意隐私合规\n"
+            "- 这只是数据采集组件，不等于完整 GEO/SEO 方案\n"
+            "- 建议人工复核后再发布\n"
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pack_dir = Path(tmpdir)
+            for fname in [
+                "01_ai_fde_deep_analysis.md", "02_xiaohongshu.md",
+                "03_douyin_video.md", "04_videohao_script.md",
+                "05_wechat_article.md", "07_geo_angle.md", "09_risk_review.md",
+            ]:
+                (pack_dir / fname).write_text(content, encoding="utf-8")
+
+            report = quality_review(pack_dir, "mendableai/firecrawl")
+            assert report.publish_recommendation in ("yes", "revise_first"), (
+                f"Expected yes/revise_first, got {report.publish_recommendation}. "
+                f"Blocking: {report.blocking_issues}"
+            )
+            assert len(report.blocking_issues) == 0, (
+                f"Should have 0 blocking issues, got: {report.blocking_issues}"
+            )
+            assert report.overall_score >= 80

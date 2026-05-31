@@ -402,6 +402,133 @@ def _check_boundary_signals(content: str, boundary: ProjectBoundary) -> tuple[bo
     return passed, missing
 
 
+def _has_unsafe_blocking_phrases(content: str, boundary: ProjectBoundary) -> bool:
+    """Check if any blocking phrase appears in a NON-safe context.
+
+    Unlike simple substring matching, this uses _is_risk_safe_context
+    to skip phrases that appear inside warnings, disclaimers, or negations.
+    """
+    all_lines = content.split("\n")
+    for phrase in boundary.blocking_phrases:
+        if phrase == "*":
+            continue
+        if phrase not in content:
+            continue
+        for i, line in enumerate(all_lines):
+            if phrase in line:
+                adjacent = _collect_adjacent_lines(all_lines, i, window=3)
+                if not _is_risk_safe_context(line, phrase, adjacent):
+                    return True
+    return False
+
+
+# Five semantic boundary categories used as fallback when hardcoded regex
+# patterns don't match but content still expresses adequate risk language.
+SEMANTIC_BOUNDARY_CATEGORIES = {
+    "tool_positioning": {
+        "label": "工具定位边界",
+        "patterns": [
+            r"(?:只是|仅是|作为|充当).{0,10}(?:组件|环节|部分|一环|中间件|管道)",
+            r"本身不(?:等于|代表|是|意味着|能)",
+            r"不(?:是|等于|代表).{0,10}(?:完整|全部|万能|最终|独立).{0,10}(?:方案|工具|解决|产品)",
+            r"(?:不等于|不代表|不是|并非).{0,5}(?:GEO|SEO|增长|排名|优化|完整)",
+            r"(?:只是|仅是).{0,10}(?:链路|流程|管道|工作流|数据).{0,10}(?:中的|的).{0,10}(?:一|某个)",
+            r"(?:不能|无法).{0,5}(?:替代|代替|取代).{0,5}(?:完整|独立|专业)",
+            r"(?:定位|角色).{0,5}(?:是|为).{0,10}(?:组件|中间件|管道|工具)",
+        ],
+    },
+    "compliance": {
+        "label": "合规边界",
+        "patterns": [
+            r"robots?\.txt",
+            r"(?:版权|著作权|知识产权|授权|许可)",
+            r"(?:不能|不得|禁止|无法|不可|不会).{0,15}(?:绕过|突破|规避|跳过).{0,10}(?:登录|验证|权限|风控|付费|认证|安全措施|保护)",
+            r"(?:隐私|个人信息|PII|数据保护|用户数据)",
+            r"(?:服务条款|ToS|terms?.{0,5}service|使用条款|平台规则)",
+            r"(?:爬虫协议|抓取规则|访问规则|网站规则)",
+            r"(?:遵守|遵循|尊重|符合|参照).{0,10}(?:规则|条款|协议|法律|法规|政策)",
+            r"(?:需要|必须|应|请).{0,10}(?:授权|许可|同意|批准|确认)",
+            r"(?:公开可访问|公开页面|无需登录|公开内容|开放页面)",
+            r"AGPL|GPL|copyleft|Copy.?left|许可证.{0,5}(?:限制|要求|传染)",
+        ],
+    },
+    "capability": {
+        "label": "能力边界",
+        "patterns": [
+            r"不(?:能|可|会|保证|承诺|确保).{0,10}(?:所有|全部|任何|任意|每个|一切)",
+            r"(?:受限于|取决于|依赖于|受到|限于).{0,10}(?:页面结构|网站配置|反爬|限制|目标|对方)",
+            r"(?:无法|不能|难以).{0,10}(?:覆盖|处理|抓取|访问|获取|保证)",
+            r"(?:不是|不等于).{0,5}(?:万能|所有|任何|一切)",
+            r"(?:可能|也许|有时|某些情况下).{0,10}(?:无法|不能|不可|会失败)",
+            r"(?:频率限制|速率限制|rate\s*limit|并发限制|API.{0,5}限制)",
+            r"(?:动态渲染|JS.?渲染|JavaScript.{0,5}渲染).{0,10}(?:影响|限制|依赖)",
+        ],
+    },
+    "commercial": {
+        "label": "商业边界",
+        "patterns": [
+            r"不(?:能|可|会|保证|承诺|确保).{0,15}(?:排名|GEO|SEO|AI.{0,5}引用|询盘|转化|订单|收入|商业)",
+            r"(?:无法|不能|不可).{0,10}(?:保证|确保|承诺).{0,10}(?:排名|GEO|SEO|引用|询盘|转化|商业)",
+            r"(?:不代表|不意味着|不等于|不保证).{0,15}(?:商业|收入|增长|成功|回报|投资)",
+            r"(?:不是|并非).{0,10}(?:营销|增长|SEO|GEO).{0,10}(?:工具|方案|策略|平台)",
+        ],
+    },
+    "human_review": {
+        "label": "人工复核边界",
+        "patterns": [
+            r"(?:需要|建议|推荐|应|请).{0,10}(?:人工|手动|人).{0,10}(?:复核|审核|检查|判断|确认|验证|通读|补写|补全|补充)",
+            r"(?:不能|无法|不可).{0,10}(?:替代|代替|取代).{0,10}(?:人工|人类|专业|专家|判断)",
+            r"(?:仅供|仅作|作为).{0,10}(?:参考|素材|初稿|草稿|简报|学习)",
+            r"(?:需.*人工|人工.*需|应由.*人|人.*判断)",
+        ],
+    },
+}
+
+
+def _check_semantic_boundary_coverage(content: str, min_categories: int = 2) -> tuple[bool, list[str]]:
+    """Check if content covers enough semantic boundary categories.
+
+    Each category has broad patterns that match semantically equivalent
+    boundary language — not just hardcoded phrases.
+
+    Returns (covered_enough, list_of_covered_category_labels).
+    """
+    import re
+    covered = []
+    for cat_key, cat_def in SEMANTIC_BOUNDARY_CATEGORIES.items():
+        for pattern in cat_def["patterns"]:
+            if re.search(pattern, content):
+                covered.append(cat_def["label"])
+                break
+    return len(covered) >= min_categories, covered
+
+
+# Disclaimer semantic matching — maps expected_disclaimer names to broad patterns
+DISCLAIMER_SEMANTIC_PATTERNS = {
+    "robots.txt 合规提醒": [
+        r"robots?\.txt", r"爬虫协议", r"抓取规则",
+        r"(?:遵守|遵循|尊重|参照).{0,10}(?:规则|条款|协议|法律)",
+    ],
+    "版权风险提醒": [
+        r"版权", r"著作权", r"知识产权", r"授权",
+        r"copyright", r"license",
+        r"AGPL|GPL|copyleft|Copy.?left|许可证",
+    ],
+    "隐私风险提醒": [
+        r"隐私", r"个人信息", r"PII", r"数据保护",
+        r"privacy", r"personal\s*(?:data|information)",
+    ],
+    "服务条款遵守提醒": [
+        r"服务条款", r"ToS", r"terms?\s*of\s*service", r"使用条款",
+        r"(?:遵守|遵循).{0,10}(?:条款|规则)",
+    ],
+    "账号操作需人工确认": [
+        r"人工.{0,5}(?:确认|审核|操作)", r"不能.{0,5}(?:自动|全自动)",
+        r"(?:需要|必须).{0,5}(?:人|手动)",
+    ],
+}
+
+
 @dataclass
 class CheckResult:
     """Result of a single review check."""
@@ -434,6 +561,9 @@ class FileReview:
 _SAFE_CONTEXT_PATTERNS = [
     # Negation: "不是 Milvus", "不同于 Chroma"
     r"(?:不是|不同于|区别于|而非|非|不像|替代.{{0,5}}){signal}",
+    # Expanded negation: "没有引入 LangChain", "不造向量库", "不包含RAG", "避免引入"
+    # "不\w{0,2}" covers 不造/不提供/不涉及/不包含/不属于/不含/不用 etc.
+    r"(?:没有|没|避免|防止|不\w{0,2}).{0,10}{signal}",
     # Comparison: "与 Milvus 相比", "不像 Chroma 那样"
     r"(?:与|和|跟|比.{{0,5}}){signal}(?:相比|不同|不一样|有区别)",
     # README excerpt header: the signal may legitimately appear in repo's own README
@@ -660,6 +790,8 @@ def risk_boundary_check(content: str, project_type: str = "generic",
     In strict_mode, also checks for required boundary signals and expected disclaimers.
     In non-strict mode, only checks for explicit blocking phrases — suitable for shorts.
     """
+    import re
+
     ctx = ctx or {}
     issues = []
     must_fix = []
@@ -707,7 +839,12 @@ def risk_boundary_check(content: str, project_type: str = "generic",
         found_count = 0
         missing = []
         for disclaimer in boundary.expected_disclaimers:
-            # Check via simplified keyword match
+            patterns = DISCLAIMER_SEMANTIC_PATTERNS.get(disclaimer, [])
+            if patterns:
+                if any(re.search(p, content) for p in patterns):
+                    found_count += 1
+                    continue
+            # Fallback to old keyword check for backward compatibility
             kw = disclaimer.replace("提醒", "").replace("遵守", "")
             if any(k in content for k in (kw, disclaimer[:4])):
                 found_count += 1
@@ -716,13 +853,33 @@ def risk_boundary_check(content: str, project_type: str = "generic",
         if found_count == 0 and len(missing) >= len(boundary.expected_disclaimers):
             issues.append(f"缺少所有关键风险提醒: {', '.join(missing[:3])}")
 
-    # ── Scoring ──
+    # ── Scoring (with semantic fallback for boundary signals) ──
     score = max(0, 100 - len(issues) * 30)
-    has_blocking = any(
-        any(bp in content for bp in boundary.blocking_phrases if bp != "*")
-        for _ in [1]  # run once
-    )
+
+    # Use smart safe-context detection for has_blocking — a phrase in a
+    # disclaimer/warning/negation context is NOT a blocking issue.
+    has_blocking = _has_unsafe_blocking_phrases(content, boundary)
+
     missing_all_disclaimers = any("缺少所有关键风险提醒" in i for i in issues)
+
+    # Semantic boundary coverage fallback: if hardcoded regex patterns didn't
+    # match but the content covers ≥2 semantic boundary categories, remove the
+    # "missing boundary signals" issue.
+    if strict_mode and boundary.required_boundary_signals:
+        signals_issue_idx = None
+        for idx, issue in enumerate(issues):
+            if "边界声明" in issue and "缺少" in issue:
+                signals_issue_idx = idx
+                break
+        if signals_issue_idx is not None:
+            semantics_ok, covered = _check_semantic_boundary_coverage(
+                content,
+                min_categories=max(2, boundary.min_boundary_signals_present + 1),
+            )
+            if semantics_ok:
+                issues.pop(signals_issue_idx)
+                score = max(0, 100 - len(issues) * 30)
+
     passed = not has_blocking and not missing_all_disclaimers and len(issues) <= 1
 
     return CheckResult(
