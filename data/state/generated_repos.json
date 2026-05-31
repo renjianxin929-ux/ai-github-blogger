@@ -30,5 +30,49 @@
       "09_risk_review",
       "10_quality_check"
     ]
+  },
+  "google-gemini/gemini-cli": {
+    "generated_at": "2026-05-31T05:03:46.244587+00:00",
+    "content_types": [
+      "00_repo_snapshot",
+      "01_ai_fde_deep_analysis",
+      "02_xiaohongshu",
+      "03_douyin_video",
+      "04_videohao_script",
+      "05_wechat_article",
+      "06_storyboard",
+      "07_geo_angle",
+      "08_enterprise_pitch",
+      "09_risk_review",
+      "10_quality_check"
+    ]
+  },
+  "infiniflow/ragflow": {
+    "generated_at": "2026-05-31T04:26:24.405523+00:00",
+    "content_types": [
+      "00_repo_snapshot",
+      "03_douyin_video",
+      "04_videohao_script",
+      "06_storyboard",
+      "08_enterprise_pitch",
+      "09_risk_review",
+      "10_quality_check"
+    ]
+  },
+  "NousResearch/hermes-agent": {
+    "generated_at": "2026-05-31T04:26:45.764100+00:00",
+    "content_types": [
+      "00_repo_snapshot",
+      "01_ai_fde_deep_analysis",
+      "02_xiaohongshu",
+      "03_douyin_video",
+      "04_videohao_script",
+      "05_wechat_article",
+      "06_storyboard",
+      "07_geo_angle",
+      "08_enterprise_pitch",
+      "09_risk_review",
+      "10_quality_check"
+    ]
   }
 }

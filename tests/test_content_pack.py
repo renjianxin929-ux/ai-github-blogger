@@ -75,7 +75,7 @@ class TestGenerateContentPackV2:
         mock_score.return_value = scored
 
         # Ensure no LLM is available
-        with mock.patch("src.content_pack._has_llm", return_value=False):
+        with mock.patch("src.content_pack._check_llm_health", return_value=(False, "structured_fallback", [])):
             pack_dir, status = generate_content_pack("test/awesome-repo", output_dir=tmp_path)
 
         assert "test__awesome-repo" in str(pack_dir)
@@ -115,7 +115,7 @@ class TestGenerateContentPackV2:
         )
         mock_score.return_value = scored
 
-        with mock.patch("src.content_pack._has_llm", return_value=False):
+        with mock.patch("src.content_pack._check_llm_health", return_value=(False, "structured_fallback", [])):
             pack_dir, _ = generate_content_pack("test/my-repo", output_dir=tmp_path)
 
         snapshot = (pack_dir / "00_repo_snapshot.md").read_text(encoding="utf-8")
@@ -152,7 +152,7 @@ class TestGenerateContentPackV2:
         )
         mock_score.return_value = scored
 
-        with mock.patch("src.content_pack._has_llm", return_value=False):
+        with mock.patch("src.content_pack._check_llm_health", return_value=(False, "structured_fallback", [])):
             pack_dir, _ = generate_content_pack("test/safe-repo", output_dir=tmp_path)
 
         risk_review = (pack_dir / "09_risk_review.md").read_text(encoding="utf-8")
@@ -185,12 +185,14 @@ class TestGenerateContentPackV2:
         )
         mock_score.return_value = scored
 
-        with mock.patch("src.content_pack._has_llm", return_value=False):
+        with mock.patch("src.content_pack._check_llm_health", return_value=(False, "structured_fallback", [])):
             pack_dir, _ = generate_content_pack("test/repo", output_dir=tmp_path)
 
         qc = (pack_dir / "10_quality_check.md").read_text(encoding="utf-8")
-        assert "未评估" in qc, f"Quality check should show '未评估' in no-LLM mode, got:\n{qc[:500]}"
-        assert "not_evaluated" in qc.lower()
+        assert "content_mode: structured_fallback" in qc or "structured_fallback" in qc, \
+            f"Quality check should show structured_fallback mode, got:\n{qc[:500]}"
+        assert "publishable: no" in qc.lower() or "不建议" in qc, \
+            f"Quality check should indicate not publishable, got:\n{qc[:500]}"
 
 
 class TestNegativeControlRiskGate:
@@ -300,10 +302,11 @@ class TestNegativeControlRiskGate:
         )
         mock_score.return_value = scored
 
-        with mock.patch("src.content_pack._has_llm", return_value=False):
+        with mock.patch("src.content_pack._check_llm_health", return_value=(False, "structured_fallback", [])):
             pack_dir, status = generate_content_pack("good/normal-repo", output_dir=tmp_path)
 
-        assert status in ("ok", "degraded"), f"Expected ok/degraded, got '{status}'"
+        assert status in ("ok", "ok_full_llm", "ok_structured_fallback", "degraded"), \
+            f"Expected ok/ok_full_llm/ok_structured_fallback/degraded, got '{status}'"
         assert not (pack_dir / "00_REJECTED.md").exists(), "Normal repo must not be rejected"
 
     @mock.patch("src.content_pack.mark_as_generated")
@@ -343,7 +346,7 @@ class TestNegativeControlRiskGate:
         )
         mock_score.return_value = scored
 
-        with mock.patch("src.content_pack._has_llm", return_value=False):
+        with mock.patch("src.content_pack._check_llm_health", return_value=(False, "structured_fallback", [])):
             pack_dir1 = generate_content_pack("test/repo", output_dir=tmp_path)
             pack_dir2 = generate_content_pack("test/repo", output_dir=tmp_path)
 

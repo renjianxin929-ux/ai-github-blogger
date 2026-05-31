@@ -458,16 +458,17 @@ def _eval_g9(conditions, blockers, warnings):
                "business_score": {}, "risk_profile": {},
                "now": datetime.now().strftime("%Y-%m-%d %H:%M")}
         qc = _gen_10_quality_check(ctx)
-        has_not_evaluated = "未评估" in qc
-        c.passed = has_not_evaluated
+        # Phase 15: no-LLM mode must be honest — explicitly say not publishable
+        honest = "publishable: no" in qc.lower() or "不建议" in qc
+        c.passed = honest
         c.score = 100 if c.passed else 0
-        c.evidence = f"no-LLM fallback uses '未评估': {has_not_evaluated}"
+        c.evidence = f"no-LLM fallback honest about publishability: {honest}"
     except Exception as e:
         c.passed = False
         c.score = 0
         c.evidence = f"Error: {e}"
     if not c.passed:
-        c.detail = "No-LLM fallback must show '未評估' not numeric score"
+        c.detail = "No-LLM fallback must explicitly state 'publishable: no'"
         (blockers if c.id in HARD_BLOCKERS else warnings).append(c.detail)
 
 

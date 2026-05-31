@@ -933,13 +933,20 @@ def generate_review_queue(
         lines.append("")
     lines.append("---")
     lines.append("")
-    lines.append("## 一、高置信度 Top 5（可直接采用）")
+
+    # ── Category 1A: Publish Review (near publishable) ────────────────
+    lines.append("## 一-A、可发布审核（publish_review）— 接近可发布，人工微调即可")
     lines.append("")
-    if top5:
-        lines.append("| # | 项目 | Pool | 置信度 | 选题分 | 建议操作 | 需检查什么 |")
-        lines.append("|---|------|------|--------|--------|----------|------------|")
-        for i, r in enumerate(top5[:5], 1):
-            bv = score_business_value(r)
+    publishable_repos = [r for r in top5 if getattr(r, 'publishability_score', 0) >= 50]
+    needs_research = [r for r in top5 if getattr(r, 'publishability_score', 0) < 50]
+
+    if publishable_repos:
+        lines.append("| # | 项目 | 可发布性 | 选题分 | 内容潜力 | 受众适配 | 建议操作 | 需检查什么 |")
+        lines.append("|---|------|---------|--------|---------|---------|----------|------------|")
+        for i, r in enumerate(publishable_repos[:5], 1):
+            pub = getattr(r, 'publishability_score', 0)
+            cp = getattr(r, 'content_potential_score', 0)
+            af = getattr(r, 'audience_fit_score', 0)
             risk = assess_risk(r)
             checks = []
             if risk.overall == "medium":
@@ -952,12 +959,31 @@ def generate_review_queue(
                 checks.append("README信息不足")
             check_str = "、".join(checks) if checks else "无特别关注点"
             lines.append(
-                f"| {i} | [{r.full_name}]({r.url}) | {r.pool} | 高 | {r.score:.0f} | 采用 | {check_str} |"
+                f"| {i} | [{r.full_name}]({r.url}) | {pub:.0f} | {r.score:.0f} | {cp:.0f} | {af:.0f} | 微调后发布 | {check_str} |"
             )
         lines.append("")
     else:
-        lines.append("> 今日无高置信度 Top 5 选题。")
+        lines.append("> 今日无高可发布性选题。")
         lines.append("")
+
+    # ── Category 1B: Research Review (needs rewrite) ──────────────────
+    lines.append("## 一-B、研究审核（research_review）— 需大幅改写，不可直接发布")
+    lines.append("")
+    if needs_research:
+        lines.append("| # | 项目 | 可发布性 | 选题分 | 内容潜力 | 降权原因 | 建议操作 |")
+        lines.append("|---|------|---------|--------|---------|----------|----------|")
+        for i, r in enumerate(needs_research[:5], 1):
+            pub = getattr(r, 'publishability_score', 0)
+            cp = getattr(r, 'content_potential_score', 0)
+            reason = r.demotion_reason or r.filter_reason or "可发布性不足"
+            lines.append(
+                f"| {i} | [{r.full_name}]({r.url}) | {pub:.0f} | {r.score:.0f} | {cp:.0f} | {reason[:60]} | 人工改稿后发布 |"
+            )
+        lines.append("")
+    else:
+        lines.append("> 今日无需深度改写的研究候选。")
+        lines.append("")
+    lines.append("---")
 
     # ── Category 2: Needs Human Review ──────────────────────────────
     lines.append("## 二、需要人工审核")

@@ -45,16 +45,17 @@ class TestAIFDEAnalyze:
     """Test ai_fde_analyze function."""
 
     @mock.patch("src.analyzer.requests.post")
-    @mock.patch("src.analyzer.get_llm_config")
-    def test_ai_fde_analyze_returns_analysis(self, mock_config, mock_post):
+    @mock.patch("src.analyzer.get_llm_providers")
+    def test_ai_fde_analyze_returns_analysis(self, mock_providers, mock_post):
         """Should call LLM API and return parsed FDEAnalysis."""
         from src.analyzer import ai_fde_analyze
 
-        mock_config.return_value = {
+        mock_providers.return_value = [{
+            "name": "test",
             "base_url": "https://api.test.com/v1",
             "api_key": "sk-test",
             "model": "test-model",
-        }
+        }]
 
         mock_resp = mock.MagicMock()
         mock_resp.status_code = 200

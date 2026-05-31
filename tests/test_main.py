@@ -370,7 +370,7 @@ class TestDryRun:
 # ── Phase 13: Daily-Workflow Tests ──────────────────────────────────────
 
 class TestDailyWorkflow:
-    """daily-workflow command: doctor → daily --no-llm → quality-gate."""
+    """Phase 15: daily-workflow command — 3-section concise output."""
 
     def test_daily_workflow_command_registered(self):
         """python run.py daily-workflow 命令存在."""
@@ -382,42 +382,42 @@ class TestDailyWorkflow:
                 choices.update(action.choices)
         assert "daily-workflow" in choices, "daily-workflow subcommand must be registered"
 
-    @mock.patch("src.main.cmd_doctor")
+    @mock.patch("src.analyzer._call_llm_with_failover")
     @mock.patch("src.main.cmd_daily")
-    @mock.patch("src.main.cmd_quality_gate")
-    def test_daily_workflow_calls_doctor_daily_quality_gate(self, mock_qg, mock_daily, mock_doctor):
-        """daily-workflow 按顺序调用 doctor → daily --no-llm → quality-gate."""
+    def test_daily_workflow_calls_daily_with_llm_check(self, mock_daily, mock_llm):
+        """daily-workflow checks LLM health and runs daily pipeline."""
         from src.main import cmd_daily_workflow
 
-        mock_doctor.return_value = 0
+        mock_llm.return_value = mock.MagicMock(success=True)
         mock_daily.return_value = 0
-        mock_qg.return_value = 0
         result = cmd_daily_workflow()
-        mock_doctor.assert_called_once()
         mock_daily.assert_called_once()
-        mock_qg.assert_called_once()
+        assert result == 0
 
-    @mock.patch("src.main.cmd_doctor")
-    def test_daily_workflow_stops_on_doctor_fail(self, mock_doctor):
-        """doctor 不通过时，daily-workflow 应停止并返回非零."""
-        from src.main import cmd_daily_workflow
-        mock_doctor.return_value = 1
-        result = cmd_daily_workflow()
-        assert result != 0, "Should return non-zero when doctor fails"
-
-    @mock.patch("src.main.cmd_doctor")
+    @mock.patch("src.analyzer._call_llm_with_failover")
     @mock.patch("src.main.cmd_daily")
-    @mock.patch("src.main.cmd_quality_gate")
-    def test_daily_workflow_shows_top5_and_next_action(self, mock_qg, mock_daily, mock_doctor, capsys):
-        """daily-workflow 输出包含 Top 5 和推荐下一步."""
+    def test_daily_workflow_handles_llm_unavailable(self, mock_daily, mock_llm):
+        """daily-workflow handles LLM unavailable gracefully."""
         from src.main import cmd_daily_workflow
-        mock_doctor.return_value = 0
+
+        mock_llm.return_value = mock.MagicMock(success=False)
         mock_daily.return_value = 0
-        mock_qg.return_value = 0
+        result = cmd_daily_workflow()
+        mock_daily.assert_called_once()
+        assert result == 0  # pipeline continues even without LLM
+
+    @mock.patch("src.analyzer._call_llm_with_failover")
+    @mock.patch("src.main.cmd_daily")
+    def test_daily_workflow_shows_sections(self, mock_daily, mock_llm, capsys):
+        """daily-workflow shows 3 sections in output."""
+        from src.main import cmd_daily_workflow
+
+        mock_llm.return_value = mock.MagicMock(success=True)
+        mock_daily.return_value = 0
         cmd_daily_workflow()
         captured = capsys.readouterr().out
-        assert "Top" in captured or "选题" in captured or "推荐" in captured or \
-            "next" in captured.lower()
+        assert "今天能发布吗" in captured or "Daily Workflow" in captured
+        assert "推荐" in captured or "候选" in captured or "命令" in captured
 
 
 # ── Phase 13: Review-Queue Tests ────────────────────────────────────────

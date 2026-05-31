@@ -2,7 +2,8 @@
 import json
 import logging
 import re
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from string import Template
 
@@ -13,10 +14,50 @@ from .config import (
     LLM_TIMEOUT,
     TEMPLATES_DIR,
     get_llm_config,
+    get_llm_providers,
 )
 from .scorer import ScoredRepo
 
 logger = logging.getLogger(__name__)
+
+# ── LLM error classification ────────────────────────────────────────────────
+
+PERMANENT_HTTP_CODES = {401, 402, 403}  # auth/payment — don't retry
+TEMPORARY_HTTP_CODES = {429, 500, 502, 503, 504}  # rate-limit/server — retry once
+
+
+def _classify_llm_error(exc: Exception) -> str:
+    """Classify an LLM call exception into error_type."""
+    if isinstance(exc, requests.exceptions.Timeout):
+        return "timeout"
+    if isinstance(exc, requests.exceptions.ConnectionError):
+        return "network"
+    if isinstance(exc, requests.exceptions.HTTPError):
+        code = getattr(exc.response, "status_code", 0)
+        if code in PERMANENT_HTTP_CODES:
+            return f"http_{code}_permanent"
+        if code in TEMPORARY_HTTP_CODES:
+            return f"http_{code}_temporary"
+        return f"http_{code}"
+    return "unknown"
+
+
+@dataclass
+class LLMCallAttempt:
+    """Record of a single LLM provider attempt."""
+    provider: str
+    error_type: str       # "" on success
+    error_code: int = 0   # HTTP status code, 0 for non-HTTP errors
+    latency_ms: float = 0
+
+
+@dataclass
+class LLMCallResult:
+    """Result of an LLM call with failover tracking."""
+    success: bool
+    content: str
+    provider: str           # which provider succeeded ("" if all failed)
+    attempts: list = field(default_factory=list)  # list of LLMCallAttempt
 
 
 @dataclass
@@ -28,32 +69,99 @@ class FDEAnalysis:
     overall_score: int  # 1-10
 
 
-def _call_llm(system_prompt: str, user_prompt: str) -> str:
-    """Call OpenAI-compatible /chat/completions and return message content."""
-    config = get_llm_config()
-    url = config["base_url"].rstrip("/") + "/chat/completions"
+def _call_llm_with_failover(
+    system_prompt: str,
+    user_prompt: str,
+    temperature: float = 0.7,
+    max_retries_per_provider: int = 1,
+) -> LLMCallResult:
+    """Call LLM with provider failover.
 
-    payload = {
-        "model": config["model"],
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        "temperature": 0.7,
-    }
+    Iterates through get_llm_providers() in priority order.
+    For each provider:
+      - On success: returns LLMCallResult with content
+      - On PERMANENT error (401/402/403): immediately moves to next provider
+      - On TEMPORARY error (429/5xx) or NETWORK error: retries once, then moves on
 
-    resp = requests.post(
-        url,
-        json=payload,
-        headers={
-            "Authorization": f"Bearer {config['api_key']}",
+    Returns LLMCallResult with success=False if all providers exhausted.
+    """
+    providers = get_llm_providers()
+    attempts: list[LLMCallAttempt] = []
+
+    if not providers:
+        attempts.append(LLMCallAttempt(provider="none", error_type="no_providers"))
+        return LLMCallResult(success=False, content="", provider="", attempts=attempts)
+
+    for provider in providers:
+        url = provider["base_url"].rstrip("/") + "/chat/completions"
+        payload = {
+            "model": provider["model"],
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": temperature,
+        }
+        headers = {
+            "Authorization": f"Bearer {provider['api_key']}",
             "Content-Type": "application/json",
-        },
-        timeout=LLM_TIMEOUT,
+        }
+
+        for attempt_idx in range(max_retries_per_provider + 1):
+            t0 = time.monotonic()
+            try:
+                resp = requests.post(
+                    url, json=payload, headers=headers,
+                    timeout=(3, LLM_TIMEOUT),  # (connect, read)
+                )
+                latency = (time.monotonic() - t0) * 1000
+                resp.raise_for_status()
+                data = resp.json()
+                content = data["choices"][0]["message"]["content"]
+                attempts.append(LLMCallAttempt(
+                    provider=provider["name"], error_type="", latency_ms=latency,
+                ))
+                return LLMCallResult(
+                    success=True, content=content,
+                    provider=provider["name"], attempts=attempts,
+                )
+            except Exception as e:
+                latency = (time.monotonic() - t0) * 1000
+                error_type = _classify_llm_error(e)
+                error_code = 0
+                if isinstance(e, requests.exceptions.HTTPError):
+                    error_code = getattr(e.response, "status_code", 0)
+
+                attempts.append(LLMCallAttempt(
+                    provider=provider["name"],
+                    error_type=error_type,
+                    error_code=error_code,
+                    latency_ms=latency,
+                ))
+
+                # PERMANENT errors: don't retry, move to next provider
+                if error_type.startswith("http_") and "_permanent" in error_type:
+                    break
+                # Last attempt for this provider
+                if attempt_idx >= max_retries_per_provider:
+                    break
+
+    return LLMCallResult(success=False, content="", provider="", attempts=attempts)
+
+
+def _call_llm(system_prompt: str, user_prompt: str) -> str:
+    """Call LLM (backward-compatible wrapper).
+
+    Uses failover internally; returns content string or raises on total failure.
+    """
+    result = _call_llm_with_failover(system_prompt, user_prompt)
+    if result.success:
+        return result.content
+    # Build error message from attempts
+    errors = "; ".join(
+        f"{a.provider}: {a.error_type}" for a in result.attempts
     )
-    resp.raise_for_status()
-    data = resp.json()
-    return data["choices"][0]["message"]["content"]
+    raise RuntimeError(f"All LLM providers exhausted: {errors}")
 
 
 def _build_fde_prompt(repo: ScoredRepo) -> tuple[str, str]:
@@ -118,8 +226,19 @@ def ai_fde_analyze(repo: ScoredRepo) -> FDEAnalysis:
     """Run AI-FDE analysis on a scored repo. Returns fallback on error."""
     try:
         system_prompt, user_prompt = _build_fde_prompt(repo)
-        response_text = _call_llm(system_prompt, user_prompt)
-        return _parse_fde_response(response_text)
+        result = _call_llm_with_failover(system_prompt, user_prompt)
+        if result.success:
+            return _parse_fde_response(result.content)
+        errors = "; ".join(
+            f"{a.provider}: {a.error_type}" for a in result.attempts
+        )
+        logger.warning("AI-FDE analysis failed for %s: all providers exhausted (%s)", repo.full_name, errors)
+        return FDEAnalysis(
+            F=f"分析失败（{repo.full_name}）：所有 LLM provider 不可用。",
+            D=f"分析失败（{repo.full_name}）：{errors[:100]}。",
+            E=f"分析失败（{repo.full_name}）：请运行 llm-doctor 诊断。",
+            overall_score=0,
+        )
     except Exception as e:
         logger.warning("AI-FDE analysis failed for %s: %s", repo.full_name, e)
         return FDEAnalysis(
@@ -184,7 +303,14 @@ def generate_content(repo: ScoredRepo, template_name: str, ctx: dict | None = No
     system_prompt = _build_system_prompt(repo, ctx or {})
 
     try:
-        return _call_llm(system_prompt, user_prompt)
+        result = _call_llm_with_failover(system_prompt, user_prompt)
+        if result.success:
+            return result.content
+        errors = "; ".join(
+            f"{a.provider}: {a.error_type}" for a in result.attempts
+        )
+        logger.warning("Content generation failed for %s/%s: all providers exhausted (%s)", repo.full_name, template_name, errors)
+        return ""
     except Exception as e:
         logger.warning("Content generation failed for %s/%s: %s", repo.full_name, template_name, e)
         return ""

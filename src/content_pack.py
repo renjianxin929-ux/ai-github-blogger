@@ -69,6 +69,160 @@ def _has_llm() -> bool:
         return False
 
 
+# Research brief header used in all no-LLM files
+RESEARCH_BRIEF_HEADER = (
+    "> ⚠️ 研究简报模式 — LLM 不可用，内容由规则自动生成\n"
+    "> 这不是可发布文章。请用下方素材在 30 分钟内人工补写。\n"
+)
+
+
+def _check_llm_health(timeout: int = 10) -> tuple:
+    """Actually test LLM API connectivity with a minimal request.
+
+    Returns (available: bool, mode: str, statuses: list[dict]).
+    mode is "full_llm" or "structured_fallback".
+    """
+    import time
+    import requests
+    from .config import get_llm_providers
+
+    providers = get_llm_providers()
+    if not providers:
+        return False, "structured_fallback", []
+
+    statuses = []
+    for p in providers:
+        try:
+            t0 = time.monotonic()
+            resp = requests.post(
+                p["base_url"].rstrip("/") + "/chat/completions",
+                json={
+                    "model": p["model"],
+                    "messages": [{"role": "user", "content": "OK"}],
+                    "max_tokens": 5,
+                    "temperature": 0,
+                },
+                headers={
+                    "Authorization": f"Bearer {p['api_key']}",
+                    "Content-Type": "application/json",
+                },
+                timeout=(3, timeout),
+            )
+            latency = (time.monotonic() - t0) * 1000
+            resp.raise_for_status()
+            statuses.append({"provider": p["name"], "available": True, "latency_ms": latency})
+            return True, "full_llm", statuses
+        except Exception as e:
+            statuses.append({"provider": p["name"], "available": False, "error": str(e)[:100]})
+
+    return False, "structured_fallback", statuses
+
+
+def _build_research_brief_sections(ctx: dict) -> dict:
+    """Build 10 high-density info items from rule-based data.
+
+    Used by all no-LLM research brief generators. No TODOs.
+    """
+    full_name = ctx.get("full_name", "未知")
+    name = ctx.get("name", full_name)
+    desc = ctx.get("description", "暂无描述")
+    stars = ctx.get("stars", "0")
+    language = ctx.get("language", "未知")
+    license_name = ctx.get("license", "未指定")
+    topics = ctx.get("topics", "无")
+    ai_evidence = ctx.get("ai_evidence", "暂无")
+
+    # 1. One-liner
+    one_liner = desc
+
+    # 2. Problem solved
+    problem_solved = ctx.get("business_summary", f"{name} 是一个 {language} 开源项目，解决 AI 相关场景需求。")
+
+    # 3. Target audience
+    risk_overall = ctx.get("risk_overall", "low")
+    if risk_overall == "low":
+        target = "AI 技术爱好者、开发者、技术决策者"
+    else:
+        target = "有技术背景的开发者、企业技术团队（需注意使用边界）"
+
+    # 4. Core features (from topics + ai_evidence)
+    features = [t.strip() for t in topics.split(",") if t.strip()][:5]
+    features_str = "、".join(features) if features else f"基于 README 描述：{desc[:100]}"
+
+    # 5. Why worth attention
+    sel_score = ctx.get("selection_score", "N/A")
+    reasons = []
+    try:
+        if int(stars) > 10000:
+            reasons.append(f"高 Star 数（{stars}）")
+    except ValueError:
+        pass
+    if license_name not in ("未指定", ""):
+        reasons.append(f"许可证明确（{license_name}）")
+    if ai_evidence and ai_evidence != "暂无":
+        reasons.append(f"AI 相关证据：{ai_evidence[:80]}")
+    if ctx.get("platform_best"):
+        reasons.append(f"最适合发布平台：{ctx['platform_best']}")
+    why_worth = "；".join(reasons) if reasons else f"选题评分 {sel_score}/100，建议进一步评估"
+
+    # 6. Comparison with similar projects
+    comparison = f"与同类项目相比，{name} 的特点是：{desc[:150]}。具体差异化需人工判断。"
+
+    # 7. Potential risks
+    risk_warnings = ctx.get("risk_warnings", [])
+    if isinstance(risk_warnings, str):
+        risk_warnings = [risk_warnings]
+    if risk_warnings and risk_warnings != ["无"]:
+        risks_str = "；".join(str(w) for w in risk_warnings if w and w != "无")
+    else:
+        risks_str = "未检测到明显风险信号，但建议发布前人工确认许可证和内容合规性"
+
+    # 8. Suitable platforms
+    platforms = []
+    for pkey, plabel in [("platform_wechat", "公众号"), ("platform_xhs", "小红书"),
+                          ("platform_douyin", "抖音"), ("platform_videohao", "视频号"),
+                          ("platform_geo", "外贸/GEO")]:
+        try:
+            score = float(ctx.get(pkey, "0"))
+            if score >= 70:
+                platforms.append(f"{plabel}({score:.0f})")
+            elif score >= 50:
+                platforms.append(f"{plabel}({score:.0f}, 需调整)")
+        except (ValueError, TypeError):
+            pass
+    platforms_str = "、".join(platforms) if platforms else ctx.get("platform_best", "公众号")
+
+    # 9. Human writing prompts
+    best_platform = ctx.get("platform_best", "公众号")
+    writing_prompt = (
+        f"建议围绕 {name} 写一篇 {best_platform} 内容。核心角度："
+        f"用「今天我拆了一个开源项目」的学习视角切入，"
+        f"先解释 {desc[:60]}，再展开 3 个落地场景，最后总结风险边界。"
+    )
+
+    # 10. Re-usable LLM prompt
+    llm_prompt = (
+        f"你是一个专注于 AI-FDE（功能创新/差异化/生态价值）的技术博主。"
+        f"请为开源项目 {full_name}（{desc}，{stars} stars，{language}，许可证：{license_name}）"
+        f"写一篇{best_platform}风格的内容。"
+        f"要求：不写软文，不卖课，用学习笔记视角，诚实标注风险。"
+        f"素材：核心功能包括 {features_str}。风险提示：{risks_str}。"
+    )
+
+    return {
+        "one_liner": one_liner,
+        "problem_solved": problem_solved,
+        "target_audience": target,
+        "core_features": features_str,
+        "why_worth_attention": why_worth,
+        "comparison": comparison,
+        "potential_risks": risks_str,
+        "suitable_platforms": platforms_str,
+        "human_writing_prompt": writing_prompt,
+        "reusable_llm_prompt": llm_prompt,
+    }
+
+
 def _build_repo_context(repo: ScoredRepo) -> dict:
     """Build a rich context dict from a scored repo for template filling.
 
@@ -161,8 +315,10 @@ def _build_repo_context(repo: ScoredRepo) -> dict:
 # ═════════════════════════════════════════════════════════════════════════════
 
 def _gen_00_snapshot(ctx: dict) -> str:
-    """Generate repo snapshot with all 4 score layers."""
+    """Generate repo snapshot with all 4 score layers (research brief mode)."""
     return f"""# {ctx['full_name']} — Repo Snapshot
+
+{RESEARCH_BRIEF_HEADER}
 
 ## 基本信息
 
@@ -257,329 +413,320 @@ def _gen_00_snapshot(ctx: dict) -> str:
 
 
 def _gen_01_fde_analysis(ctx: dict) -> str:
-    """Generate AI-FDE deep analysis (no-LLM version uses rules + template)."""
-    return f"""# {ctx['full_name']} — AI-FDE 深度分析
+    """Research brief: AI-FDE deep analysis with rule-filled data, no TODOs."""
+    b = _build_research_brief_sections(ctx)
+    return f"""# {ctx['full_name']} — AI-FDE 深度分析（研究简报）
+
+{RESEARCH_BRIEF_HEADER}
 
 ## 一句话概述
 
-{ctx['description']}
+{b['one_liner']}
 
 > {ctx['name']} 是一个开源的 AI 相关项目，⭐ {ctx['stars']} stars，使用 {ctx['language']} 开发。
 
-## 它解决谁的什么问题
+## 项目解决的问题
 
-[TODO: LLM 分析 — 请描述目标用户和核心痛点]
+{b['problem_solved']}
 
-基于现有信息：
-- 项目 Topics: {ctx['topics']}
-- AI 相关性: {ctx['ai_evidence']}
-- 项目描述: {ctx['description']}
+## 目标用户
 
-## 背后的 AI 能力
+{b['target_audience']}
 
-[TODO: LLM 分析 — 列出具体的 AI 技术栈和能力]
+## 核心功能
 
-## 普通人怎么理解
+{b['core_features']}
 
-> 一句话版本：{ctx['name']} 是一个 {ctx['language']} 写的开源工具，主要做 {ctx['description'][:60]}...
+AI 相关性证据：{ctx['ai_evidence']}
 
-普通人理解成本评分：{ctx['understandability']} / 10
+## AI-FDE 视角拆解
 
-## 企业老板为什么会关心
-
-企业落地场景评分：{ctx['enterprise_fit']} / 10
-
-[TODO: LLM 分析 — 从降本增效、竞争力、风险控制角度说明]
-
-## AI-FDE 视角怎么拆
-
-| F (功能创新) | [TODO] 该项目解决了什么具体问题？技术方案有何新意？ |
-| D (差异化) | [TODO] 与同类项目相比，它有什么不可替代的地方？ |
-| E (生态价值) | [TODO] 对中文开发者和 AI 生态的实际价值有多大？ |
+| F (功能创新) | {ctx['name']} 在 {ctx['language']} 技术栈上提供了 {ctx['description'][:80]} 等能力。具体创新点需人工从 README 中提取。 |
+| D (差异化) | {b['comparison'][:120]} |
+| E (生态价值) | 对中文开发者和 AI 生态的实际价值需结合安装量、社区活跃度、被依赖程度判断。 |
 
 AI-FDE 训练价值评分：{ctx['fde_training']} / 10
 
-## 能不能直接落地
+## 企业落地
 
+企业落地场景评分：{ctx['enterprise_fit']} / 10
 商业延展性评分：{ctx['service_extensibility']} / 10
-
-[TODO: LLM 分析 — 落地的技术前提、团队要求、时间成本]
-
-## 商用前还缺什么
-
-[TODO: LLM 分析 — 功能缺口、合规要求、技术支持]
-
-## 风险与边界
-
 风险可控性评分：{ctx['risk_controllability']} / 10
 
-风险标记: {ctx['risk_hits']}
+## 潜在风险
 
-## 今日落地评分
+{b['potential_risks']}
 
-商业价值总分：**{ctx['business_score']} / 100**
-
-> {ctx['business_summary']}
+## 商业价值总分：{ctx['business_score']} / 100
 
 ---
 
 *生成时间：{ctx['now']}*
-*模式：No-LLM fallback — [TODO] 标记处需要 LLM 补充*
+*模式：structured_fallback — 规则生成研究简报*
 """
 
 
 def _gen_02_xiaohongshu(ctx: dict) -> str:
-    """Generate Xiaohongshu content template."""
-    return f"""# {ctx['name']} — 小红书内容草稿
+    """Research brief: Xiaohongshu content with platform analysis, no TODOs."""
+    b = _build_research_brief_sections(ctx)
+    xhs_score = ctx.get('platform_xhs', 'N/A')
+    return f"""# {ctx['name']} — 小红书内容（研究简报）
 
-> 模式：No-LLM fallback — 需要 LLM 生成完整文案
-> 风格要求：小白能懂，有收藏价值，不夸大，不卖焦虑
+{RESEARCH_BRIEF_HEADER}
 
-## 标题建议（5 个）
+## 平台适配评分
 
-[TODO: LLM — 生成 5 个吸引人的标题]
+小红书适配度：**{xhs_score} / 100**
 
-参考信息：
-- 项目名：{ctx['name']}
-- 一句话：{ctx['description']}
-- AI 标签：{ctx['topics']}
+## 项目信息
 
-## 6 张图文卡片文案
+- 项目：{ctx['full_name']}
+- ⭐ {ctx['stars']} | {ctx['language']} | 许可证：{ctx['license']}
+- {b['one_liner']}
 
-### 卡片 1 — 钩子
-[TODO] 用一句话抓住注意力
+## 标题方案（3 个，规则生成）
 
-### 卡片 2 — 项目是什么
-[TODO] 最简单的解释
+1. 拆解 {ctx['name']}：{b['one_liner'][:40]}...
+2. GitHub {ctx['stars']} stars 的 {ctx['language']} 开源工具，解决什么问题？
+3. 今天拆了一个 AI 开源项目：{ctx['name']}，适合什么场景？
 
-### 卡片 3 — 能干什么
-[TODO] 3 个具体场景
+## 为什么适合/不适合小红书
 
-### 卡片 4 — 怎么用
-[TODO] 最简单的上手方式
+- 视觉吸引力：{'高 — 项目有 demo/截图/示例' if ctx.get('platform_xhs', '0') > '70' else '中 — 需要自行设计视觉卡片'}
+- 收藏价值：{'高 — 实用工具类，有可复用的方法论' if ctx.get('platform_xhs', '0') > '60' else '中 — 适合做知识科普'}
+- 小白友好度：{'高' if float(ctx.get('understandability', '5')) > 7 else '中 — 需要额外解释技术概念'}
 
-### 卡片 5 — 启发和思考
-[TODO] 每个人都能从中学到什么
+## 写作角度建议
 
-### 卡片 6 — 总结 + 引导
-[TODO] 一句话总结 + 引导互动
-
-## 正文（1 篇）
-
-[TODO: LLM — 600-800 字，小红书风格]
-
-## 结尾互动
-
-[TODO] 引导评论、收藏、关注
+{b['human_writing_prompt']}
 
 ## 标签建议
 
-`#AI工具` `#{ctx['language']}` `#开源项目` `#效率提升`
+`#AI工具` `#{ctx['language']}` `#开源项目` `#效率提升` `#AI学习笔记`
+
+## 可复制给 LLM 的二次生成 Prompt
+
+```
+{b['reusable_llm_prompt']}
+要求输出 6 张小红书图文卡片（钩子→是什么→能干什么→怎么用→启发→总结），600-800 字，小白能懂，有收藏价值，不夸大不卖焦虑。
+```
 
 ---
 
 *生成时间：{ctx['now']}*
+*模式：structured_fallback — 规则生成研究简报*
 """
 
 
 def _gen_03_douyin(ctx: dict) -> str:
-    """Generate Douyin video script template."""
-    return f"""# {ctx['name']} — 抖音 60 秒口播稿
+    """Research brief: Douyin video script with platform analysis, no TODOs."""
+    b = _build_research_brief_sections(ctx)
+    return f"""# {ctx['name']} — 抖音视频（研究简报）
 
-> 模式：No-LLM fallback — 需要 LLM 生成完整口播稿
-> 要求：不夸张，不说"普通人马上赚钱"
+{RESEARCH_BRIEF_HEADER}
 
-## 项目信息
-- 项目：{ctx['full_name']}
-- ⭐ {ctx['stars']} | 语言：{ctx['language']}
-- {ctx['description']}
+## 平台适配
+- 抖音适配度：{ctx.get('platform_douyin', 'N/A')} / 100
+- 项目：{ctx['full_name']} | ⭐ {ctx['stars']} | {ctx['language']}
+- 一句话：{b['one_liner'][:100]}
 
-## 前 3 秒强钩子
+## 前 3 秒钩子建议
+"{ctx['name']}：{b['one_liner'][:60]}"
+提示：用具体数字（{ctx['stars']} stars）或反常识点开头，避免"今天给大家推荐一个工具"。
 
-[TODO: LLM — 必须在前 3 秒抓住注意力]
+## 60 秒口播结构
+- 0-3s：钩子（用一句话制造好奇心）
+- 3-15s：这个项目是什么（不超过 2 句话）
+- 15-35s：能解决什么具体问题（1-2 个场景）
+- 35-50s：同类对比 + 风险提醒
+- 50-60s：结尾引导（点赞/关注/评论区）
 
-## 分段口播（60 秒）
+## 核心功能（可做视觉素材）
+{b['core_features']}
 
-[TODO: LLM — 4 段，每段约 15 秒]
+## 可复制给 LLM 的二次生成 Prompt
 
-## 字幕文案
-
-[TODO: LLM — 完整字幕，含时间轴]
-
-## 结尾引导
-
-[TODO] 引导点赞、关注、评论区互动
+```
+{b['reusable_llm_prompt']}
+要求输出 60 秒抖音口播稿，含时间轴，前 3 秒强钩子，口语化，不夸大。
+```
 
 ---
 
 *生成时间：{ctx['now']}*
+*模式：structured_fallback*
 """
 
 
 def _gen_04_videohao(ctx: dict) -> str:
-    """Generate VideoHao (视频号) script template."""
-    return f"""# {ctx['name']} — 视频号 90 秒口播稿
+    """Research brief: VideoHao script with platform analysis, no TODOs."""
+    b = _build_research_brief_sections(ctx)
+    return f"""# {ctx['name']} — 视频号（研究简报）
 
-> 模式：No-LLM fallback — 需要 LLM 生成完整口播稿
-> 风格：更稳重，适合企业老板/业务负责人
+{RESEARCH_BRIEF_HEADER}
 
-## 项目信息
-- 项目：{ctx['full_name']}
-- ⭐ {ctx['stars']} | 语言：{ctx['language']}
-- {ctx['description']}
+## 平台适配
+- 视频号适配度：{ctx.get('platform_videohao', 'N/A')} / 100
+- 项目：{ctx['full_name']} | ⭐ {ctx['stars']} | {ctx['language']}
+- 一句话：{b['one_liner'][:100]}
 
-## 开场（15 秒）
+## 企业视角开场建议
+"今天拆一个 {ctx['language']} 开源项目 {ctx['name']}，它能帮企业解决..."
 
-[TODO: LLM — 从企业视角切入，不提技术细节]
+## 90 秒口播结构（企业决策者向）
+- 0-15s：从企业痛点切入（不堆技术术语）
+- 15-45s：3 个落地价值点（降本/增效/竞争力）
+- 45-75s：落地条件和风险
+- 75-90s：下一步行动建议
 
-## 主体（60 秒）
-
-[TODO: LLM — 3 段，每段强调一个企业落地价值点]
-
-## 结尾（15 秒）
-
-[TODO: LLM — 引导企业决策者思考和互动]
-
-## 企业关联场景
-
-基于规则分析：
+## 企业相关数据
 - 企业落地评分：{ctx['enterprise_fit']} / 10
 - 商业延展性：{ctx['service_extensibility']} / 10
 
-[TODO: LLM — 展开具体的中国企业应用场景]
+## 可复制给 LLM 的二次生成 Prompt
+
+```
+{b['reusable_llm_prompt']}
+要求输出 90 秒视频号口播稿，面向企业决策者，稳重专业，强调落地价值，不提技术细节。
+```
 
 ---
 
 *生成时间：{ctx['now']}*
+*模式：structured_fallback*
 """
 
 
 def _gen_05_wechat(ctx: dict) -> str:
-    """Generate WeChat article template."""
-    return f"""# {ctx['name']} — 公众号长文草稿
+    """Research brief: WeChat article with complete 10-item research brief, no TODOs."""
+    b = _build_research_brief_sections(ctx)
+    return f"""# {ctx['name']} — 公众号文章（研究简报）
 
-> 模式：No-LLM fallback — 需要 LLM 生成完整文章
-> 目标：1200-2000 字，不卖课，只做成长记录和方法沉淀
+{RESEARCH_BRIEF_HEADER}
 
-## 标题建议（3 个）
+## 项目基本信息
 
-1. [TODO: LLM]
-2. [TODO: LLM]
-3. [TODO: LLM]
+| 字段 | 值 |
+|------|----|
+| 项目 | [{ctx['full_name']}]({ctx['url']}) |
+| ⭐ Stars | {ctx['stars']} |
+| 语言 | {ctx['language']} |
+| 许可证 | {ctx['license']} |
+| 最近更新 | {ctx['updated_at']} |
 
-## 文章结构
+## 1. 项目一句话解释
 
-### 1. 为什么这个项目值得看
+{b['one_liner']}
 
-> 基于评分：{ctx['selection_score']} / 100 | 商业价值：{ctx['business_score']} / 100
+## 2. 项目解决的问题
 
-[TODO: LLM — 200-300 字]
+{b['problem_solved']}
 
-### 2. 项目是什么
+## 3. 目标用户
 
-- 项目：{ctx['full_name']}
-- ⭐ {ctx['stars']} | {ctx['language']} | 许可证：{ctx['license']}
-- {ctx['description']}
+{b['target_audience']}
 
-[TODO: LLM — 300-400 字]
+## 4. 核心功能列表
 
-### 3. 普通人怎么理解
+{b['core_features']}
 
-基于：{ctx['understandability']} / 10 理解成本评分
+## 5. 为什么值得关注
 
-[TODO: LLM — 200-300 字，用类比和场景解释]
+{b['why_worth_attention']}
 
-### 4. 企业场景
+选题评分：{ctx['selection_score']} / 100 | 商业价值：{ctx['business_score']} / 100
 
-基于：{ctx['enterprise_fit']} / 10 企业落地评分
+## 6. 和同类项目的区别
 
-[TODO: LLM — 300-400 字]
+{b['comparison']}
 
-### 5. AI-FDE 视角
+## 7. 潜在风险
 
-[TODO: LLM — 200-300 字，从 FDE 三维拆解]
+{b['potential_risks']}
 
-### 6. 落地风险
+风险可控性评分：{ctx['risk_controllability']} / 10
 
-风险可控性：{ctx['risk_controllability']} / 10
+## 8. 适合平台
 
-[TODO: LLM — 150-200 字]
+{b['suitable_platforms']}
 
-### 7. 我的学习收获
+最佳平台：**{ctx['platform_best']}**
 
-[TODO: LLM — 150-200 字，个人成长视角，不卖课]
+## 9. 人工写作提示词
+
+{b['human_writing_prompt']}
+
+理解成本评分：{ctx['understandability']} / 10
+企业落地评分：{ctx['enterprise_fit']} / 10
+
+## 10. 可复制给 LLM 的二次生成 Prompt
+
+```
+{b['reusable_llm_prompt']}
+要求输出 1200-2000 字公众号长文，以「我今天拆了一个项目」的学习视角，分 7 段（为什么值得看→项目是什么→怎么理解→企业场景→AI-FDE 拆解→风险→学习收获），不写软文不卖课，诚实标注风险边界。
+```
+
+## 文章结构建议
+
+1. **为什么这个项目值得看**（200-300 字）：用评分数据 + 一句话引出
+2. **项目是什么**（300-400 字）：从 {b['one_liner'][:60]} 展开
+3. **普通人怎么理解**（200-300 字）：用类比解释 {ctx['name']}
+4. **企业场景**（300-400 字）：对应的商业落地可能性
+5. **AI-FDE 视角**（200-300 字）：从功能创新/差异化/生态价值三维拆解
+6. **落地风险**（150-200 字）：诚实标注边界
+7. **我的学习收获**（150-200 字）：个人成长视角
 
 ---
 
 *生成时间：{ctx['now']}*
+*模式：structured_fallback — 规则生成研究简报*
 """
 
 
 def _gen_06_storyboard(ctx: dict) -> str:
-    """Generate 9:16 vertical video storyboard template."""
-    return f"""# {ctx['name']} — 9:16 竖屏分镜脚本
+    """Research brief: Storyboard with shot structure framework, no TODOs."""
+    b = _build_research_brief_sections(ctx)
+    return f"""# {ctx['name']} — 分镜脚本框架（研究简报）
 
-> 模式：No-LLM fallback — 需要 LLM 生成完整分镜
-> 风格：白底蓝图工程风，不全局抖动，只做局部动效
+{RESEARCH_BRIEF_HEADER}
 
 ## 项目信息
 - {ctx['full_name']}
 - ⭐ {ctx['stars']} | {ctx['language']}
-- {ctx['description']}
+- {b['one_liner'][:120]}
 
-## 6 镜头分镜
+## 分镜结构（6 镜 × 35 秒）
 
-### 镜头 1 — 项目名 + 钩子（3 秒）
-- 视觉中心：项目名大字 + 一句话钩子
-- 标题区：[TODO]
-- 主体区：[TODO]
-- 字幕区：[TODO]
-- 动效：[TODO]
+| 镜号 | 时长 | 主题 | 视觉建议 |
+|------|------|------|----------|
+| 1 | 3s | 钩子 | 项目名大字 + 一句话钩子：「{b['one_liner'][:50]}」 |
+| 2 | 8s | 输入→输出 | 数据流图/架构图，展示 {ctx['name']} 的核心工作流 |
+| 3 | 8s | 企业场景 | {b['target_audience'][:40]} 的使用场景示意 |
+| 4 | 8s | AI 能力 | 标签云：{b['core_features'][:60]} |
+| 5 | 5s | 风险边界 | 风险清单 + 免责声明：「{b['potential_risks'][:60]}」 |
+| 6 | 3s | 评分 | 商业价值 {ctx['business_score']}/100 仪表盘 + 引导关注 |
 
-### 镜头 2 — 输入 → 处理 → 输出（8 秒）
-- 视觉中心：数据流图
-- 标题区：[TODO]
-- 主体区：[TODO]
-- 字幕区：[TODO]
-- 动效：[TODO]
+## 视觉风格
+- 白底蓝图工程风
+- 不全局抖动，只做局部动效
+- 中文字幕，底部 1/3 区域
 
-### 镜头 3 — 企业场景（8 秒）
-- 视觉中心：场景示意图
-- 标题区：[TODO]
-- 主体区：[TODO]
-- 字幕区：[TODO]
-- 动效：[TODO]
+## 可复制给 LLM 的二次生成 Prompt
 
-### 镜头 4 — AI 能力节点（8 秒）
-- 视觉中心：能力标签云
-- 标题区：[TODO]
-- 主体区：[TODO]
-- 字幕区：[TODO]
-- 动效：[TODO]
-
-### 镜头 5 — 落地风险（5 秒）
-- 视觉中心：风险清单
-- 标题区：[TODO]
-- 主体区：[TODO]
-- 字幕区：[TODO]
-- 动效：[TODO]
-
-### 镜头 6 — 今日评分（3 秒）
-- 视觉中心：评分仪表盘
-- 商业价值：{ctx['business_score']} / 100
-- 标题区：[TODO]
-- 主体区：[TODO]
-- 字幕区：[TODO]
-- 动效：[TODO]
+```
+{b['reusable_llm_prompt']}
+要求输出 6 镜头分镜脚本（9:16 竖屏），白底蓝图工程风，每镜含标题区/主体区/字幕区/动效说明。
+```
 
 ---
 
 *生成时间：{ctx['now']}*
+*模式：structured_fallback*
 """
 
 
 def _gen_07_geo(ctx: dict) -> str:
-    """Generate GEO / foreign-trade angle analysis."""
+    """Research brief: GEO angle analysis — honest about fit, no forced GEO."""
     text = f"{ctx.get('name', '')} {ctx.get('description', '')} {ctx.get('topics', '')}".lower()
     has_geo = any(k in text for k in ("geo", "seo", "外贸", "ai-search", "search"))
     has_auto = any(k in text for k in ("automation", "workflow", "n8n", "dify"))
@@ -592,87 +739,98 @@ def _gen_07_geo(ctx: dict) -> str:
         if has_auto:
             details.append("- 项目的自动化能力可转化为外贸工作流方案")
         can_use = "\n".join(details) if details else "- 需要进一步分析具体结合方式"
+        geo_recommend = "可以尝试制作 GEO/外贸角度内容，但需要人工补充具体的外贸场景案例。"
     else:
         verdict = "**不建议硬蹭** — 该项目与外贸/GEO/AI搜索可见性没有明显交集"
-        can_use = "- 如果强行结合，会让内容显得生硬，反而降低账号可信度"
+        can_use = "- 如果强行结合，会让内容显得生硬，反而降低账号可信度。建议放弃 GEO 角度，聚焦项目本身的技术或应用价值。"
+        geo_recommend = "不建议从 GEO/外贸角度切入。建议选择更匹配的平台（如公众号、小红书）来制作内容。"
 
-    return f"""# {ctx['name']} — 外贸 / GEO 角度分析
+    return f"""# {ctx['name']} — 外贸 / GEO 角度分析（研究简报）
 
-> 模式：No-LLM fallback — 需要 LLM 深度拓展
+{RESEARCH_BRIEF_HEADER}
 
 ## 结合判断
 
 {verdict}
 
-## 外贸客户能不能用
+## GEO 适配度分析
 
-基于规则分析：
 - GEO/SEO 关联：{'是' if has_geo else '否'}
 - 自动化关联：{'是' if has_auto else '否'}
 - 企业落地评分：{ctx['enterprise_fit']} / 10
+- 平台 GEO 评分：{ctx.get('platform_geo', 'N/A')} / 100
 
 {can_use}
 
-[TODO: LLM — 具体的外贸客户使用场景和案例]
+## 建议
 
-## GEO 服务商能不能借鉴
+{geo_recommend}
 
-[TODO: LLM — GEO 服务商视角的借鉴点]
+## 可复制给 LLM 的二次生成 Prompt
 
-## 是否适合作为商业服务切入点
-
-商业延展性评分：{ctx['service_extensibility']} / 10
-
-[TODO: LLM — 服务化、产品化、咨询化的可行性分析]
+```
+外贸/GEO 角度分析开源项目 {ctx['full_name']}（{ctx['description']}，{ctx['stars']} stars）。
+{'该项目与 GEO/外贸有交集。' if has_geo or has_auto else '该项目与 GEO/外贸无明显交集，不建议硬蹭。'}
+请从外贸客户使用场景、GEO 服务商借鉴角度、商业服务切入点三维度分析。
+```
 
 ---
 
 *生成时间：{ctx['now']}*
+*模式：structured_fallback*
 """
 
 
 def _gen_08_enterprise_pitch(ctx: dict) -> str:
-    """Generate enterprise pitch (3 versions)."""
-    return f"""# {ctx['name']} — 企业宣讲三版本
+    """Research brief: Enterprise pitch with business evidence, no TODOs."""
+    b = _build_research_brief_sections(ctx)
+    return f"""# {ctx['name']} — 企业宣讲（研究简报）
 
-> 模式：No-LLM fallback — 需要 LLM 生成完整文案
+{RESEARCH_BRIEF_HEADER}
 
 ## 项目背景
 - {ctx['full_name']}
-- ⭐ {ctx['stars']} | 企业落地评分：{ctx['enterprise_fit']} / 10
+- ⭐ {ctx['stars']} | {ctx['language']} | 许可证：{ctx['license']}
+- 企业落地评分：{ctx['enterprise_fit']} / 10
 - 商业价值总分：{ctx['business_score']} / 100
 
-## 版本一：老板版（关注降本增效）
+## 版本一：老板版素材（降本增效视角）
 
-[TODO: LLM — 200-300 字，用 ROI 和效率语言]
+核心卖点：{b['problem_solved'][:150]}
+目标场景：{b['target_audience']}
+关键问题：
+- 这个工具能让团队省多少时间？（需人工评估）
+- 和现有系统怎么配合？（技术栈：{ctx['language']}）
+- 投入和产出比大概多少？（取决于部署规模和场景）
 
-关键角度：
-- 这个工具能让团队省多少时间？
-- 和现有系统怎么配合？
-- 投入和产出比大概多少？
+## 版本二：技术版素材（架构与风险视角）
 
-## 版本二：技术版（关注架构与风险）
+技术栈：{ctx['language']} / Topics: {ctx['topics']}
+核心竞争力：{b['comparison'][:150]}
+关键问题：
+- 与现有技术栈的兼容性（{ctx['language']} 生态）
+- 部署和维护成本（许可证：{ctx['license']}）
+- 潜在风险：{b['potential_risks'][:120]}
 
-[TODO: LLM — 200-300 字，用技术语言]
+## 版本三：客户版素材（结果和体验视角）
 
-关键角度：
-- 技术栈：{ctx['language']} / Topics: {ctx['topics']}
-- 架构亮点和潜在风险
-- 与现有技术栈的兼容性
-- 部署和维护成本
+核心价值：{b['one_liner'][:150]}
+关键问题：
+- 最终用户能看到什么变化？（取决于具体应用场景）
+- 比不用这个工具好在哪里？（效率提升/质量提升/成本降低）
+- 学习成本多高？（理解成本评分：{ctx['understandability']}/10）
 
-## 版本三：客户版（关注结果和体验）
+## 可复制给 LLM 的二次生成 Prompt
 
-[TODO: LLM — 200-300 字，用结果语言]
-
-关键角度：
-- 最终用户能看到什么变化？
-- 比不用这个工具好在哪里？
-- 学习成本多高？
+```
+{b['reusable_llm_prompt']}
+请生成三个版本的企业宣讲稿：老板版（ROI语言，200-300字）、技术版（架构语言，200-300字）、客户版（结果语言，200-300字）。
+```
 
 ---
 
 *生成时间：{ctx['now']}*
+*模式：structured_fallback*
 """
 
 
@@ -765,72 +923,121 @@ def _gen_09_risk_review(ctx: dict) -> str:
 
 
 def _no_llm_quality_check(ctx: dict) -> str:
-    """No-LLM fallback quality check — always shows '未评估' regardless of LLM availability."""
-    return f"""# {ctx['name']} — 内容质量检查
+    """Structured fallback quality check — honest about LLM unavailability."""
+    b = _build_research_brief_sections(ctx)
+    return f"""# 发布前质量检查报告
 
-> 模式：No-LLM fallback — 内容质量评分仅在 LLM 完整生成后启用
+**项目**：{ctx['full_name']}
+**检查时间**：{ctx['now']}
 
-## 评分维度
+---
 
-| 维度 | 评分 | 说明 |
-|------|------|------|
-| 内容准确性 | **未评估** | 需 LLM 验证事实和数据的准确性 |
-| 业务可讲性 | **未评估** | 需 LLM 评估叙事逻辑和表现力 |
-| 小白理解度 | **未评估** | 需 LLM 验证类比和解释是否足够通俗 |
-| 平台适配 | **未评估** | 需 LLM 检查各平台内容是否匹配受众 |
-| 边界感 | **未评估** | 需 LLM 审查风险表述和免责声明 |
-| 个人主线 | **未评估** | 需 LLM 验证与 AI-FDE 主线的契合度 |
-| **总体** | **未评估** | 请在 LLM 模式下重新生成以获取质量评分 |
+## 0. 生成模式
 
-## 结论
+- **llm_status**: unavailable
+- **content_mode**: structured_fallback
+- **publishable**: no
+- **推荐发布**: revise_first
+- **阻断数**: 0 (无 TODO，但内容为规则生成)
+- **需人工审核**: yes
+- **缺失段落**: 所有需要 LLM 写作的内容段落
+- **不可发布原因**: LLM API 不可用，内容为规则自动生成的研究简报，不是可发布文章
 
-⚠️ **No-LLM 模式下不评估内容质量** — 当前内容基于规则模板生成，包含 [TODO] 标记处需要 LLM 补充。
-请配置 LLM_API_KEY 后重新运行 `python run.py content {ctx['full_name']}` 以获取完整的质量评估。
+---
+
+## 1. 总结结论
+
+- **是否建议发布**：🔴 不建议 — LLM 不可用，内容为研究简报
+- **总分**：≤75 / 100 (structured_fallback 上限)
+- **内容质量**：规则数据准确，但缺少 AI 写作的叙事逻辑和表现力
+- **发布前必须**：使用 LLM 模式重新生成，或基于研究简报人工写作
+
+---
+
+## 2. 素材完整度
+
+| 项目 | 状态 |
+|------|------|
+| 项目一句话解释 | ✅ {b['one_liner'][:60]} |
+| 项目解决的问题 | ✅ 已提供 |
+| 目标用户 | ✅ {b['target_audience'][:40]} |
+| 核心功能 | ✅ {b['core_features'][:60]} |
+| 为什么值得关注 | ✅ 已提供 |
+| 同类项目对比 | ✅ 已提供 |
+| 潜在风险 | ✅ 已提供 |
+| 适合平台 | ✅ {b['suitable_platforms'][:60]} |
+| 人工写作提示词 | ✅ 已提供 |
+| LLM 二次生成 Prompt | ✅ 已提供 |
+
+---
+
+## 3. 发布建议
+
+- **小红书**：❌ 不建议（需人工补写完整 6 张卡片文案）
+- **公众号**：❌ 不建议（需人工补写 1200-2000 字长文）
+- **视频号**：❌ 不建议（需人工补写完整口播稿）
+- **外贸/GEO**：❌ 不建议
+- 是否需要人工补充观点：是（所有内容段落均需人工写作或 LLM 重新生成）
+
+---
+
+## 4. 下一步
+
+1. 如果 LLM 恢复：运行 `python run.py content {ctx['full_name']}` 重新生成完整内容包
+2. 如果需要人工写：打开 `05_wechat_article.md`，使用研究简报中的 10 项素材在 30 分钟内补写
+3. 人工写完后：通读确认无夸大表述、无虚假信息、有风险边界提醒
+
+---
+
+## 5. 最终结论
+
+**需人工改稿** — LLM 不可用，当前为研究简报模式。素材完整可供人工 30 分钟内补写，但不能直接发布。
 
 ---
 
 *生成时间：{ctx['now']}*
-*模式：No-LLM fallback — content_quality_score = not_evaluated*
+*模式：structured_fallback*
 """
 
 
 def _gen_10_quality_check(ctx: dict) -> str:
-    """Generate quality check report.
-
-    v4: In no-LLM fallback mode, content_quality_score is "未评估" — not a numeric score.
-    Only LLM-generated content gets a real quality score.
-    """
-    # Respect explicit no_llm override from context (for testing / quality-gate)
-    # before falling back to actual LLM availability check.
-    if ctx.get("no_llm"):
+    """Generate quality check report with llm_status/content_mode/publishable fields."""
+    no_llm_override = ctx.get("no_llm")
+    if no_llm_override:
         return _no_llm_quality_check(ctx)
 
-    llm_available = _has_llm()
+    llm_available, llm_mode, _ = _check_llm_health(timeout=10)
 
     if not llm_available:
         return _no_llm_quality_check(ctx)
 
-    # LLM mode — would produce real scores
-    return f"""# {ctx['name']} — 内容质量检查
+    return f"""# 发布前质量检查报告
 
-> 模式：LLM 评估
+**项目**：{ctx['full_name']}
+**检查时间**：{ctx['now']}
 
-## 评分维度
+---
 
-| 维度 | 评分 | 说明 |
-|------|------|------|
-| 内容准确性 | [LLM] /10 | 基于事实核查 |
-| 业务可讲性 | [LLM] /10 | 基于叙事质量 |
-| 小白理解度 | [LLM] /10 | 基于通俗度评估 |
-| 平台适配 | [LLM] /10 | 基于各平台受众匹配 |
-| 边界感 | [LLM] /10 | 基于风险表述审查 |
-| 个人主线 | [LLM] /10 | 基于 AI-FDE 契合度 |
-| **总体** | **[LLM]/10** | 加权平均 |
+## 0. 生成模式
+
+- **llm_status**: available
+- **content_mode**: full_llm
+- **publishable**: pending (待 reviewer 管线确认)
+- **推荐发布**: pending
+- **阻断数**: 0
+- **需人工审核**: yes (建议通读所有文件)
+- **缺失段落**: 无
+
+---
+
+## 1. 总结结论
+
+LLM 可用，完整内容已生成。请通读所有文件确认质量后发布。
 
 ---
 
 *生成时间：{ctx['now']}*
-*模式：LLM*
+*模式：full_llm*
 """
 
 
@@ -1012,10 +1219,14 @@ def generate_content_pack(
         shutil.rmtree(pack_dir)
     pack_dir.mkdir(parents=True, exist_ok=True)
 
-    # 5. Check LLM availability
-    llm_available = _has_llm()
-    mode_label = "LLM" if llm_available else "No-LLM fallback"
+    # 5. Check LLM availability — actual health check, not just key existence
+    llm_available, llm_mode, llm_statuses = _check_llm_health(timeout=10)
+    mode_label = "full_llm" if llm_available else "structured_fallback"
     logger.info("Content pack mode: %s (retries=%d, timeout=%ds)", mode_label, max_retries, timeout_seconds)
+    if not llm_available and llm_statuses:
+        for s in llm_statuses:
+            logger.warning("LLM provider %s: %s", s["provider"],
+                           "available" if s["available"] else f"unavailable ({s['error']})")
 
     # 6. Generate content with retry + reviewer pipeline per file
     generated_types = []
@@ -1121,11 +1332,15 @@ def generate_content_pack(
             logger.warning("Quality review failed: %s", e)
 
     # 8. Write status manifest
-    status = "ok"
+    # Phase 15 statuses: ok_full_llm / ok_structured_fallback / degraded / failed
     if failed_files:
         status = "failed"
     elif degraded_files:
         status = "degraded"
+    elif not llm_available:
+        status = "ok_structured_fallback"
+    else:
+        status = "ok_full_llm"
 
     # Phase 11: Quality status with reviewer integration
     quality_status = "ready"

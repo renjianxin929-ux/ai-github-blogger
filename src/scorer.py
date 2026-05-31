@@ -43,6 +43,10 @@ class ScoredRepo:
     contributors_count: int
     score: float = 0.0
     subscores: dict = field(default_factory=dict)
+    # ── v15 new scoring dimensions ──
+    content_potential_score: float = 0.0
+    audience_fit_score: float = 0.0
+    publishability_score: float = 0.0
     # ── v4 classification fields ──
     content_type: str = "unclear"
     ai_evidence: list[str] = field(default_factory=list)
@@ -190,6 +194,150 @@ def _score_risk_controllable(repo: EnrichedRepo) -> float:
     if any(k in text for k in unmaintained):
         score -= 2.0
     return max(0.0, min(10.0, score))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# v15: content_potential_score — "素材够不够写一篇好文章" (0-100)
+# ═════════════════════════════════════════════════════════════════════════════
+
+def _score_content_potential(repo: EnrichedRepo) -> float:
+    """内容潜力分 (0-100) — README信息充足度 + 差异化 + 可讲性."""
+    score = 20.0
+    readme = repo.readme or ""
+    readme_len = len(readme)
+
+    # README充足度 (40 pts)
+    if readme_len > 3000:
+        score += 30.0
+    elif readme_len > 1000:
+        score += 20.0
+    elif readme_len > 500:
+        score += 10.0
+    elif readme_len > 200:
+        score += 5.0
+    else:
+        score *= 0.7  # README < 200 chars → -30%
+
+    # 有结构化的章节标题 (10 pts)
+    if re.search(r"^#{1,3}\s", readme, re.MULTILINE):
+        score += 10.0
+
+    # 有代码示例 (10 pts)
+    if re.search(r"```", readme):
+        score += 10.0
+
+    # 有截图/demo/GIF (10 pts)
+    if re.search(r"!\[.*\]\(|screenshot|demo\.gif|\.png|\.jpg", readme, re.IGNORECASE):
+        score += 10.0
+
+    # 差异化信号 (20 pts) — topics 是否暗示独特定位
+    topics = [t.lower() for t in (repo.topics or [])]
+    differentiation_signals = {"browser-use", "mcp", "geo", "ai-search",
+                                "multi-agent", "agent-swarm", "knowledge-graph",
+                                "graph-rag", "text-to-sql", "function-calling"}
+    diff_hits = sum(1 for t in topics if t in differentiation_signals)
+    score += min(20.0, diff_hits * 5.0)
+
+    # 描述清晰度 (10 pts)
+    desc = repo.description or ""
+    if 20 < len(desc) < 200:
+        score += 10.0
+    elif len(desc) > 0:
+        score += 5.0
+
+    return max(0.0, min(100.0, score))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# v15: audience_fit_score — "写给谁看、谁想看" (0-100)
+# ═════════════════════════════════════════════════════════════════════════════
+
+def _score_audience_fit(repo: EnrichedRepo) -> float:
+    """受众适配分 (0-100) — 小白友好度 + 技术受众 + 企业决策者."""
+    score = 20.0
+    readme = (repo.readme or "").lower()
+    desc = (repo.description or "").lower()
+    all_text = f"{desc} {readme}"
+
+    # 小白友好度 (30 pts)
+    beginner_signals = ["快速开始", "quick start", "getting started", "入门",
+                        "5分钟", "5 minute", "一键部署", "demo", "playground",
+                        "try it", "在线体验", "no code", "low code", "低代码"]
+    beginner_hits = sum(1 for s in beginner_signals if s in all_text)
+    score += min(30.0, beginner_hits * 5.0)
+
+    # 技术受众适配 (30 pts)
+    tech_signals = ["api", "sdk", "python", "typescript", "docker",
+                    "architecture", "架构", "command line", "cli",
+                    "rest", "graphql", "webhook", "plugin", "extension"]
+    tech_hits = sum(1 for s in tech_signals if s in all_text)
+    score += min(30.0, tech_hits * 3.0)
+
+    # 企业决策者适配 (20 pts)
+    enterprise_signals = ["enterprise", "企业", "case study", "案例",
+                          "roi", "效率提升", "降本", "合规", "compliance",
+                          "security", "安全", "scale", "扩展", "production"]
+    ent_hits = sum(1 for s in enterprise_signals if s in all_text)
+    score += min(20.0, ent_hits * 4.0)
+
+    # 中文内容加分 (10 pts) — 中文受众关键信号
+    if re.search(r"[一-鿿]", repo.readme or ""):
+        score += 10.0
+
+    # stars 辅助 (10 pts) — 知名度间接反映受众规模
+    if repo.stars >= 10000:
+        score += 10.0
+    elif repo.stars >= 1000:
+        score += 5.0
+    elif repo.stars >= 100:
+        score += 2.0
+
+    return max(0.0, min(100.0, score))
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# v15: publishability_score — "今天能不能写出好内容" (0-100)
+# ═════════════════════════════════════════════════════════════════════════════
+
+def _score_publishability(
+    ai_relevance: float,
+    content_potential: float,
+    audience_fit: float,
+    risk_controllable: float,
+    repo: EnrichedRepo,
+) -> float:
+    """可发布性分 (0-100) — 综合判断今天能不能写出好内容.
+
+    formula: ai_relevance×0.3 + content_potential×0.3 + audience_fit×0.2 + risk×0.2
+    Caps enforced for low-info / high-risk repos.
+    """
+    # Base weighted score (rescale inputs from 0-20/0-15/0-10 to 0-100 for formula)
+    ai_norm = (ai_relevance / 20.0) * 100.0
+    cp_norm = content_potential  # already 0-100
+    af_norm = audience_fit       # already 0-100
+    risk_norm = (risk_controllable / 10.0) * 100.0  # normalize from 0-10 to 0-100
+
+    base = ai_norm * 0.3 + cp_norm * 0.3 + af_norm * 0.2 + risk_norm * 0.2
+
+    # Caps
+    readme_len = len(repo.readme or "")
+    text = f"{repo.name or ''} {repo.description or ''} {repo.readme or ''}".lower()
+
+    # High risk → max 30
+    from .config import HIGH_RISK_KEYWORDS
+    risk_hits = [kw for kw in HIGH_RISK_KEYWORDS if kw in text]
+    if risk_hits:
+        base = min(base, 30.0)
+
+    # README < 100 chars → max 40
+    if readme_len < 100:
+        base = min(base, 40.0)
+
+    # License unclear → max 50
+    if not repo.license:
+        base = min(base, 50.0)
+
+    return max(0.0, min(100.0, round(base, 2)))
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -451,13 +599,33 @@ def apply_classification_and_filters(scored: list[ScoredRepo]) -> dict:
                 repo.pool = "review"
                 result["all_classified"].append(repo)
                 continue
-            repo.score *= 0.85
+            repo.score *= 0.7  # v15: stricter penalty (was 0.85)
+            repo.publishability_score = min(repo.publishability_score, 40.0)
             repo.demotion_reason = "项目信息不足（content_type: unclear），降权处理"
+
+        # v15: extra penalties for low-info repos
+        readme_len = len(repo.readme or "")
+        if readme_len < 100:
+            repo.score *= 0.8
+            repo.publishability_score = min(repo.publishability_score, 40.0)
+            if not repo.demotion_reason:
+                repo.demotion_reason = "README 过短（<100字符），信息不足以支撑深度文章"
+        if not repo.license and repo.stars < 1000:
+            repo.score *= 0.8
+            repo.publishability_score = min(repo.publishability_score, 50.0)
+            if not repo.demotion_reason:
+                repo.demotion_reason = "许可证不明且 Stars<1000，选题风险较高"
+
+        # v15: medium risk penalty
+        if repo.risk_level == "low":
+            repo.score -= 5
+            repo.publishability_score = min(repo.publishability_score, 60.0)
 
         repo.pool = "top5"
         result["runnable_top5"].append(repo)
 
-    result["runnable_top5"].sort(key=lambda r: r.score, reverse=True)
+    # v15: sort by publishability_score, fallback to score
+    result["runnable_top5"].sort(key=lambda r: (r.publishability_score, r.score), reverse=True)
     result["evergreen_candidates"].sort(key=lambda r: r.score, reverse=True)
     result["resource_candidates"].sort(key=lambda r: r.score, reverse=True)
     result["high_risk_skipped"].sort(key=lambda r: r.score, reverse=True)
@@ -491,6 +659,17 @@ def score_repo(repo: EnrichedRepo) -> ScoredRepo:
     total = max(0.0, min(100.0, total))
     total *= getattr(repo, "_dedup_penalty", 1.0)
 
+    # v15: compute new scoring dimensions
+    content_potential = _score_content_potential(repo)
+    audience_fit = _score_audience_fit(repo)
+    publishability = _score_publishability(
+        ai_relevance=subscores["ai_relevance"],
+        content_potential=content_potential,
+        audience_fit=audience_fit,
+        risk_controllable=subscores["risk_controllable"],
+        repo=repo,
+    )
+
     return ScoredRepo(
         full_name=repo.full_name,
         name=repo.name,
@@ -506,9 +685,53 @@ def score_repo(repo: EnrichedRepo) -> ScoredRepo:
         contributors_count=repo.contributors_count,
         score=round(total, 2),
         subscores=subscores,
+        content_potential_score=round(content_potential, 2),
+        audience_fit_score=round(audience_fit, 2),
+        publishability_score=publishability,
     )
 
 
 def rank_repos(scored: list[ScoredRepo], limit: int = 20) -> list[ScoredRepo]:
     ranked = sorted(scored, key=lambda r: r.score, reverse=True)
     return ranked[:limit]
+
+
+def select_top_n(
+    runnable: list[ScoredRepo],
+    n: int = 5,
+    min_publishability: int = 40,
+) -> tuple[list[ScoredRepo], list[ScoredRepo], bool]:
+    """Select Top N repos with tie-breaking and quality threshold.
+
+    Rules:
+      - Sort by (publishability_score, score) descending
+      - If adjacent ranks differ by < 2 in publishability_score,
+        prefer the one with higher audience_fit_score
+      - Top 3 must have publishability_score >= min_publishability
+      - Returns (selected, remaining, quality_sufficient)
+    """
+    if not runnable:
+        return [], [], False
+
+    sorted_repos = sorted(
+        runnable,
+        key=lambda r: (r.publishability_score, r.score, r.audience_fit_score),
+        reverse=True,
+    )
+
+    # Tie-breaker: adjacent scores < 2 → compare audience_fit
+    for i in range(len(sorted_repos) - 1):
+        if abs(sorted_repos[i].publishability_score - sorted_repos[i + 1].publishability_score) < 2:
+            if sorted_repos[i + 1].audience_fit_score > sorted_repos[i].audience_fit_score:
+                sorted_repos[i], sorted_repos[i + 1] = sorted_repos[i + 1], sorted_repos[i]
+
+    selected = sorted_repos[:n]
+    remaining = sorted_repos[n:]
+
+    # Top 3 quality check
+    top3_pass = all(
+        r.publishability_score >= min_publishability
+        for r in selected[:min(3, len(selected))]
+    )
+
+    return selected, remaining, top3_pass

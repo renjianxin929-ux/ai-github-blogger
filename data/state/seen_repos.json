@@ -1,48 +1,48 @@
 {
   "langgenius/dify": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 9
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 16
   },
   "langchain-ai/langchain": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 8
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 15
   },
   "Shubhamsaboo/awesome-llm-apps": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 8
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 15
   },
   "infiniflow/ragflow": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 4
+    "last_seen": "2026-05-31T04:23:29.933260+00:00",
+    "times_recommended": 5
   },
   "n8n-io/n8n": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 10
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 17
   },
   "open-webui/open-webui": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 8
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 15
   },
   "NousResearch/hermes-agent": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 8
+    "last_seen": "2026-05-31T04:23:29.933260+00:00",
+    "times_recommended": 9
   },
   "Snailclimb/JavaGuide": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 9
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 16
   },
   "f/prompts.chat": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 7
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 13
   },
   "browser-use/browser-use": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
@@ -51,18 +51,18 @@
   },
   "Significant-Gravitas/AutoGPT": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 10
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 16
   },
   "punkpeye/awesome-mcp-servers": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 6
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 13
   },
   "langflow-ai/langflow": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 9
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 16
   },
   "x1xhlol/system-prompts-and-models-of-ai-tools": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
@@ -81,28 +81,28 @@
   },
   "msitarzewski/agency-agents": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 8
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 15
   },
   "google-gemini/gemini-cli": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 8
+    "last_seen": "2026-05-31T04:23:29.933260+00:00",
+    "times_recommended": 9
   },
   "rasbt/LLMs-from-scratch": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 3
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 10
   },
   "ChatGPTNextWeb/NextChat": {
     "first_seen": "2026-05-29T10:31:27.079340+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 6
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 13
   },
   "thedotmack/claude-mem": {
     "first_seen": "2026-05-29T10:55:17.412119+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 4
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 11
   },
   "openclaw/openclaw": {
     "first_seen": "2026-05-29T10:55:17.412119+00:00",
@@ -111,13 +111,13 @@
   },
   "Comfy-Org/ComfyUI": {
     "first_seen": "2026-05-29T10:55:17.412119+00:00",
-    "last_seen": "2026-05-29T13:16:10.709275+00:00",
-    "times_recommended": 5
+    "last_seen": "2026-05-31T06:36:55.485103+00:00",
+    "times_recommended": 8
   },
   "github/spec-kit": {
     "first_seen": "2026-05-29T10:55:17.412119+00:00",
-    "last_seen": "2026-05-29T13:16:10.709275+00:00",
-    "times_recommended": 4
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 9
   },
   "nextlevelbuilder/ui-ux-pro-max-skill": {
     "first_seen": "2026-05-29T10:55:17.412119+00:00",
@@ -136,13 +136,13 @@
   },
   "supabase/supabase": {
     "first_seen": "2026-05-29T10:55:17.412119+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 3
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 8
   },
   "karpathy/autoresearch": {
     "first_seen": "2026-05-29T10:55:17.412119+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
-    "times_recommended": 4
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 11
   },
   "hacksider/Deep-Live-Cam": {
     "first_seen": "2026-05-29T11:25:10.705515+00:00",
@@ -311,7 +311,27 @@
   },
   "affaan-m/ECC": {
     "first_seen": "2026-05-30T01:15:35.772858+00:00",
-    "last_seen": "2026-05-30T01:15:35.772858+00:00",
+    "last_seen": "2026-05-31T04:23:29.933260+00:00",
+    "times_recommended": 2
+  },
+  "ollama/ollama": {
+    "first_seen": "2026-05-31T04:23:29.933260+00:00",
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 7
+  },
+  "huggingface/transformers": {
+    "first_seen": "2026-05-31T06:08:11.207265+00:00",
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 6
+  },
+  "ggml-org/llama.cpp": {
+    "first_seen": "2026-05-31T06:08:11.207265+00:00",
+    "last_seen": "2026-05-31T06:47:00.648977+00:00",
+    "times_recommended": 6
+  },
+  "multica-ai/andrej-karpathy-skills": {
+    "first_seen": "2026-05-31T06:08:11.207265+00:00",
+    "last_seen": "2026-05-31T06:08:11.207265+00:00",
     "times_recommended": 1
   }
 }

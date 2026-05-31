@@ -222,3 +222,41 @@ def get_llm_config() -> dict:
         "api_key": api_key,
         "model": os.getenv("LLM_MODEL", "deepseek-chat"),
     }
+
+
+def get_llm_providers() -> list[dict]:
+    """Return LLM providers ordered by priority.
+
+    Each provider is a dict with: name, base_url, api_key, model.
+    Primary provider (DeepSeek) uses LLM_API_KEY/LLM_API_BASE/LLM_MODEL.
+    Fallback providers use FALLBACK_LLM_* env vars.
+    """
+    providers = []
+    # Primary
+    primary_key = os.getenv("LLM_API_KEY", "")
+    if primary_key:
+        providers.append({
+            "name": "deepseek",
+            "base_url": os.getenv("LLM_API_BASE", "https://api.deepseek.com/v1"),
+            "api_key": primary_key,
+            "model": os.getenv("LLM_MODEL", "deepseek-chat"),
+        })
+    # Fallback 1
+    fb_key = os.getenv("FALLBACK_LLM_API_KEY", "")
+    if fb_key:
+        providers.append({
+            "name": os.getenv("FALLBACK_LLM_PROVIDER", "openrouter"),
+            "base_url": os.getenv("FALLBACK_LLM_API_BASE", "https://openrouter.ai/api/v1"),
+            "api_key": fb_key,
+            "model": os.getenv("FALLBACK_LLM_MODEL", "openai/gpt-4o"),
+        })
+    return providers
+
+
+def mask_key(key: str) -> str:
+    """Return a safe representation of an API key (prefix only)."""
+    if not key:
+        return "not configured"
+    if len(key) <= 8:
+        return "*** (too short)"
+    return f"{key[:4]}***{key[-4:]}"

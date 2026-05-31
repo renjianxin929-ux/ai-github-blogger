@@ -89,6 +89,9 @@ def build_parser() -> argparse.ArgumentParser:
     # review-queue (Phase 13)
     subparsers.add_parser("review-queue", help="Show human review checklist from latest daily run")
 
+    # llm-doctor (Phase 15)
+    subparsers.add_parser("llm-doctor", help="Diagnose LLM provider connectivity")
+
     # Default to "daily" if no subcommand specified
     parser.set_defaults(command="daily", no_llm=False)
 
@@ -930,83 +933,127 @@ def cmd_dry_run() -> int:
 
 
 def cmd_daily_workflow() -> int:
-    """Phase 13: One-command daily workflow — doctor → daily --no-llm → quality-gate.
+    """Phase 15: One-command daily workflow — 3-section concise output.
 
-    No LLM tokens consumed. Outputs Top 5 + recommended next action.
+    Sections: 今天能发布吗 / 最推荐的项目及理由 / 下一步命令.
     """
     import os
     from datetime import datetime, timezone
 
+    from .analyzer import _call_llm_with_failover
+    from .config import get_llm_providers
+
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
+    # ── LLM health check ──
+    llm_available = False
+    providers = get_llm_providers()
+    if providers:
+        try:
+            result = _call_llm_with_failover(
+                system_prompt="Reply with just OK.",
+                user_prompt="OK",
+                temperature=0.0,
+                max_retries_per_provider=0,
+            )
+            llm_available = result.success
+        except Exception:
+            llm_available = False
+
+    # ── Run daily pipeline ──
+    daily_rc = cmd_daily(no_llm=True)
+
+    # ── Collect top5 info ──
+    import json as _json
+    top5_path = REPORTS_DIR / f"top5_{today}.json"
+    top5 = []
+    if top5_path.exists():
+        try:
+            top5 = _json.loads(top5_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    # ══════════════════════════════════════════════════════════════════
+    print()
     print("=" * 64)
     print(f"  Daily Workflow — {today}")
     print("=" * 64)
     print()
 
-    # 1. Doctor
-    print("── [1/3] Environment Health Check ──")
-    doctor_rc = cmd_doctor()
-    if doctor_rc != 0:
-        print()
-        print("  Doctor check FAILED. Fix the issues above before proceeding.")
-        return doctor_rc
+    # ── Section 1: 今天能发布吗 ──
+    print("── 今天能发布吗？ ──")
     print()
-
-    # 2. Daily --no-llm
-    print("── [2/3] Daily Pipeline (--no-llm) ──")
-    daily_rc = cmd_daily(no_llm=True)
-    print()
-
-    # 3. Quality Gate
-    print("── [3/3] Quality Gate ──")
-    qg_rc = cmd_quality_gate()
-    print()
-
-    # ── Recommendations ───────────────────────────────────────────────
-    print("=" * 64)
-    print("  Next Steps")
-    print("=" * 64)
-    print()
-
-    # Check LLM status
-    llm_key = os.getenv("LLM_API_KEY") or ""
-    if not llm_key:
-        env_path = Path(__file__).resolve().parent.parent / ".env"
-        if env_path.exists():
-            try:
-                for line in env_path.read_text(encoding="utf-8").splitlines():
-                    if line.startswith("LLM_API_KEY="):
-                        llm_key = line.split("=", 1)[1].strip().strip('"').strip("'")
-                        break
-            except Exception:
-                pass
-
-    if llm_key:
-        print("  LLM_API_KEY: configured")
-        print("  Run content generation with:")
-        print("    python run.py content owner/repo")
-        print()
+    if llm_available:
+        print("  ✅ LLM 可用 — 内容生成模式: full_llm")
+        print("     生成的公众号文章、小红书等可直接发布（需人工通读）。")
     else:
-        print("  LLM_API_KEY: not configured")
-        print("  All content generation will use no-LLM rule-based fallback.")
-        print("  To get full AI-powered content, add LLM_API_KEY to .env")
-        print()
-
-    print("  Review candidates:")
-    print("    python run.py review-queue")
+        print("  ⚠️  LLM 不可用 — 内容生成模式: structured_fallback")
+        print("     今天不能直接发布，只能进入人工改稿。")
+        print("     生成的是研究简报（research brief），不是可发布文章。")
+        print("     请用简报中的素材在 30 分钟内人工补写。")
     print()
-    print("  Re-run dry-run to verify:")
-    print("    python run.py dry-run")
+
+    # ── Section 2: 最推荐的项目及理由 ──
+    print("── 最推荐的项目及理由 ──")
+    print()
+    if top5:
+        best = top5[0]
+        name = best.get("full_name", best.get("name", "unknown"))
+        stars = best.get("stars", 0)
+        score = best.get("score", 0)
+        pub_score = best.get("publishability_score", 0)
+        desc = best.get("description", "")[:120]
+        content_type = best.get("content_type", "unclear")
+        topics = best.get("topics", [])
+        reason_parts = []
+        if pub_score >= 60:
+            reason_parts.append(f"可发布性高({pub_score:.0f}/100)")
+        if stars >= 1000:
+            reason_parts.append(f"社区认可({stars} stars)")
+        if content_type == "runnable_project":
+            reason_parts.append("可运行项目，素材充分")
+        if desc:
+            reason_parts.append(f"一句话: {desc}")
+        if not reason_parts:
+            reason_parts.append(f"综合评分最高({score:.0f}/100)")
+
+        print(f"  项目: {name}")
+        print(f"  推荐理由: {'; '.join(reason_parts)}")
+        if topics:
+            print(f"  标签: {', '.join(topics[:5])}")
+        if llm_available and pub_score >= 40:
+            print(f"  操作: python run.py content {name}")
+        elif not llm_available:
+            print(f"  操作: python run.py content {name}  # 将进入 structured_fallback 模式")
+        else:
+            print(f"  注意: 可发布性不足({pub_score:.0f})，建议人工审核后再生成")
+
+        # Show remaining top5 with brief scores
+        if len(top5) > 1:
+            print()
+            print("  其他候选:")
+            for r in top5[1:5]:
+                rname = r.get("full_name", r.get("name", "unknown"))
+                rscore = r.get("publishability_score", r.get("score", 0))
+                print(f"    - {rname} (可发布性: {rscore:.0f})")
+    else:
+        print("  今日无高置信度选题。建议扩大搜索范围或检查 GitHub API 状态。")
+    print()
+
+    # ── Section 3: 下一步命令 ──
+    print("── 下一步命令 ──")
+    print()
+    if llm_available and top5:
+        best_name = top5[0].get("full_name", top5[0].get("name", ""))
+        print(f"  生成内容:  python run.py content {best_name}")
+    print("  审核队列:    python run.py review-queue")
+    print("  LLM 诊断:    python run.py llm-doctor")
+    print("  试运行:      python run.py dry-run")
+    print("  全量验证:    python -m pytest tests/ -v")
     print()
     print("=" * 64)
 
-    # Return non-zero if daily or quality gate failed
-    if daily_rc != 0:
-        return daily_rc
-    if qg_rc != 0:
-        return qg_rc
-    return 0
+    return daily_rc
 
 
 def cmd_review_queue() -> int:
@@ -1053,8 +1100,167 @@ def cmd_review_queue() -> int:
     return 0
 
 
+def cmd_llm_doctor() -> int:
+    """Phase 15: Diagnose LLM provider connectivity.
+
+    Tests each configured provider with a minimal request.
+    Never prints full API keys.
+    """
+    import os
+    import time
+    import requests
+
+    from .config import get_llm_providers, mask_key
+    from .analyzer import _classify_llm_error
+
+    print()
+    print("=" * 64)
+    print("  LLM Doctor")
+    print("=" * 64)
+    print()
+
+    # ── Config section ──
+    llm_key = os.getenv("LLM_API_KEY", "")
+    llm_base = os.getenv("LLM_API_BASE", "https://api.deepseek.com/v1")
+    llm_model = os.getenv("LLM_MODEL", "deepseek-chat")
+    fb_key = os.getenv("FALLBACK_LLM_API_KEY", "")
+    fb_base = os.getenv("FALLBACK_LLM_API_BASE", "")
+    fb_model = os.getenv("FALLBACK_LLM_MODEL", "")
+    fb_provider = os.getenv("FALLBACK_LLM_PROVIDER", "openrouter")
+
+    print("🔧 配置")
+    print(f"  LLM_API_KEY:      {mask_key(llm_key)}")
+    print(f"  LLM_API_BASE:     {llm_base}")
+    print(f"  LLM_MODEL:        {llm_model}")
+    print(f"  FALLBACK_LLM_API_KEY: {mask_key(fb_key)}")
+    if fb_key:
+        print(f"  FALLBACK_LLM_API_BASE: {fb_base}")
+        print(f"  FALLBACK_LLM_MODEL:    {fb_model}")
+    print()
+
+    # ── Provider status ──
+    providers = get_llm_providers()
+    if not providers:
+        print("📡 Provider 状态")
+        print("  No providers configured.")
+        print()
+        print("📋 结论")
+        print("  LLM_API_KEY 未配置。内容生成将进入 structured_fallback 模式。")
+        print("  建议：Copy .env.example to .env and set LLM_API_KEY.")
+        print()
+        return 1
+
+    print("📡 Provider 状态")
+    all_failed = True
+    short_test_prompt = "Say OK in one word."
+
+    for i, p in enumerate(providers):
+        label = "primary" if i == 0 else f"fallback {i}"
+        print(f"  {i+1}. {p['name']} ({label})")
+        url = p["base_url"].rstrip("/") + "/chat/completions"
+        print(f"     URL: {url}")
+
+        try:
+            t0 = time.monotonic()
+            resp = requests.post(
+                url,
+                json={
+                    "model": p["model"],
+                    "messages": [{"role": "user", "content": short_test_prompt}],
+                    "max_tokens": 10,
+                    "temperature": 0,
+                },
+                headers={
+                    "Authorization": f"Bearer {p['api_key']}",
+                    "Content-Type": "application/json",
+                },
+                timeout=(5, 15),
+            )
+            latency = (time.monotonic() - t0) * 1000
+            resp.raise_for_status()
+            data = resp.json()
+            content = data["choices"][0]["message"]["content"]
+            print(f"     Status: ✅ 可用 ({latency:.0f}ms)")
+            print(f"     Response: \"{content[:80]}\"")
+            all_failed = False
+        except Exception as e:
+            error_type = _classify_llm_error(e)
+            error_code = 0
+            if isinstance(e, requests.exceptions.HTTPError):
+                error_code = getattr(e.response, "status_code", 0)
+            print(f"     Status: ❌ 不可用")
+            print(f"     Error: {error_code} {type(e).__name__}")
+
+            if error_type in ("http_401_permanent",):
+                print(f"     Diagnosis: API Key 无效或未授权，请检查 LLM_API_KEY")
+            elif error_type in ("http_402_permanent",):
+                print(f"     Diagnosis: 账户余额不足或欠费，请充值后重试")
+            elif error_type in ("http_403_permanent",):
+                print(f"     Diagnosis: 权限不足，请检查 API Key 权限范围")
+            elif error_type in ("http_429_temporary",):
+                print(f"     Diagnosis: 请求频率过高，稍后自动恢复")
+            elif error_type in ("timeout",):
+                print(f"     Diagnosis: 连接超时，请检查网络或换用低延迟 provider")
+            elif error_type in ("network",):
+                print(f"     Diagnosis: 网络不可达，请检查 DNS 或防火墙设置")
+            else:
+                print(f"     Diagnosis: 未知错误类型 ({error_type})")
+        print()
+
+    # ── Test generation ──
+    print("🧪 测试生成")
+    print(f"  Test prompt: \"{short_test_prompt}\"")
+
+    from .analyzer import _call_llm_with_failover
+    result = _call_llm_with_failover(
+        system_prompt="You are a helpful assistant.",
+        user_prompt=short_test_prompt,
+        temperature=0,
+    )
+
+    if result.success:
+        print(f"  Result: ✅ 成功 (provider: {result.provider})")
+    else:
+        errors = "; ".join(
+            f"{a.provider}: {a.error_type}({a.error_code})" for a in result.attempts
+        )
+        print(f"  Result: ❌ 失败")
+        print(f"  Attempts: {errors}")
+    print()
+
+    # ── Conclusion ──
+    print("📋 结论")
+    if all_failed:
+        print("  LLM 当前不可用。内容生成将进入 structured_fallback 模式。")
+        if fb_key:
+            print(f"  Primary 和 fallback 均已测试，均不可用。")
+        else:
+            print("  建议：配置 FALLBACK_LLM_API_KEY 以增加容错，或修复 primary 连接。")
+    else:
+        print("  LLM 可用。内容生成将使用 full_llm 模式。")
+
+    n_ok = sum(1 for p in providers if not all_failed) if not all_failed else 0
+    print(f"  Provider 可用: {n_ok}/{len(providers)}")
+    print()
+
+    return 0 if not all_failed else 1
+
+
 def cmd_content(repo_full_name: str) -> int:
-    """Generate content pack for a specific repo (Phase 7: retry + degraded)."""
+    """Phase 15: Generate content pack with LLM health awareness.
+
+    Statuses: ok_full_llm / ok_structured_fallback / degraded / failed
+    """
+    from .content_pack import _check_llm_health
+
+    # Pre-flight LLM health check
+    llm_available, llm_mode, _ = _check_llm_health(timeout=10)
+    if not llm_available:
+        print()
+        print("  ⚠️  LLM 不可用 — 内容将生成为 structured_fallback 研究简报")
+        print("     这不是可发布文章，需要人工补写后才能发布。")
+        print()
+
     logger.info("Generating V2 content pack for %s...", repo_full_name)
     logger.info("Files: %s", ", ".join(CONTENT_FILES_V2))
     pack_dir, status = generate_content_pack(repo_full_name)
@@ -1065,7 +1271,16 @@ def cmd_content(repo_full_name: str) -> int:
     for f in files:
         print(f"  {f.name} ({f.stat().st_size} bytes)")
     print(f"\nTotal: {len(files)} files in {pack_dir}")
-    print(f"Status: {status}")
+
+    # Status display with clear labels
+    status_labels = {
+        "ok_full_llm": "✅ OK (full_llm) — 内容由 LLM 生成，可直接发布",
+        "ok_structured_fallback": "⚠️  OK (structured_fallback) — 研究简报模式，需人工补写后才能发布",
+        "degraded": "⚠️  DEGRADED — 部分文件生成失败，需人工补全",
+        "failed": "❌ FAILED — 内容生成失败",
+    }
+    label = status_labels.get(status, f"Unknown status: {status}")
+    print(f"Status: {label}")
 
     # Read manifest
     manifest_path = pack_dir / "_manifest.json"
@@ -1074,16 +1289,24 @@ def cmd_content(repo_full_name: str) -> int:
         print(f"  Generated: {manifest.get('files_generated', 0)}")
         print(f"  Degraded:  {manifest.get('files_degraded', 0)}")
         print(f"  Failed:    {manifest.get('files_failed', 0)}")
+        if "content_mode" in manifest:
+            print(f"  Content Mode: {manifest['content_mode']}")
+        if "llm_status" in manifest:
+            print(f"  LLM Status: {manifest['llm_status']}")
 
-    # Show which files are TODOs vs complete
+    # Show per-file status
     for f in files:
         content = f.read_text(encoding="utf-8")
-        degraded = "source_status: degraded" in content
+        is_brief = "NOT_PUBLISHABLE_RESEARCH_BRIEF" in content
+        degraded_mark = "source_status: degraded" in content
         todo_count = content.count("[TODO")
-        if degraded:
-            print(f"  ⚠ {f.name}: DEGRADED (retries exhausted)")
+
+        if is_brief:
+            print(f"  📋 {f.name}: 研究简报 (需人工补写)")
+        elif degraded_mark:
+            print(f"  ⚠️  {f.name}: DEGRADED (retries exhausted)")
         elif todo_count > 0:
-            print(f"  ⚠ {f.name}: {todo_count} TODO(s) remaining (needs LLM)")
+            print(f"  ⚠️  {f.name}: {todo_count} TODO(s) remaining")
         else:
             print(f"  ✅ {f.name}: complete")
 
@@ -1091,9 +1314,11 @@ def cmd_content(repo_full_name: str) -> int:
         return 1
     elif status == "blocked":
         print("\n⛔ BLOCKED: 高风险项目，已拒绝生成内容。")
-        return 4  # blocked — distinct exit code
+        return 4
     elif status == "degraded":
-        return 2  # conditional pass
+        return 2
+    elif status == "ok_structured_fallback":
+        return 3  # distinct exit code for fallback mode
     return 0
 
 
@@ -1124,6 +1349,8 @@ def main() -> int:
         return cmd_daily_workflow()
     elif args.command == "review-queue":
         return cmd_review_queue()
+    elif args.command == "llm-doctor":
+        return cmd_llm_doctor()
     elif args.command == "content":
         if not args.repo:
             parser.error("content command requires a repo argument (owner/repo)")
