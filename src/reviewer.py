@@ -364,6 +364,10 @@ _TEMPLATE_PLACEHOLDER_PATTERNS = [
     (r"> 模式：No-LLM", "检测到 No-LLM 模式标记，内容为模板占位"),
     (r"需要\s*LLM\s*(?:深度拓展|生成完整文章)", "检测到 LLM 依赖标记，内容不完整"),
     (r"> 模式：No-LLM fallback", "检测到 No-LLM fallback 模式，需 LLM 重新生成"),
+    # Phase 15: Research brief markers
+    (r"研究简报模式", "检测到研究简报模式标记，内容不是可发布文章"),
+    (r"NOT_PUBLISHABLE_RESEARCH_BRIEF", "检测到不可发布研究简报标记"),
+    (r"这不是可发布文章", "检测到不可发布声明，需 LLM 重新生成"),
 ]
 
 
@@ -434,6 +438,9 @@ _SAFE_CONTEXT_PATTERNS = [
     r"(?:与|和|跟|比.{{0,5}}){signal}(?:相比|不同|不一样|有区别)",
     # README excerpt header: the signal may legitimately appear in repo's own README
     r"README\s*(?:摘要|摘录|原文)",
+    # Ecosystem background enumeration: "X很多(LangChain等)，但Firecrawl..."
+    # Signal is listed as one-of-many in market landscape context, not as the subject
+    r"(?:很多|不少|大量|遍地).{0,30}(?:等|等等)",
 ]
 
 # Patterns indicating a risk phrase appears in a WARNING/DISCLAIMER context, not as a feature claim
@@ -441,14 +448,26 @@ _RISK_SAFE_CONTEXT_PATTERNS = [
     # Legal warnings: "绕过反爬措施可能触及法律", "不能抓取…"
     r"(?:可能触及|触犯|违反|违法|非法|法律|法规|合规)",
     # Risk disclaimers: "不能抓取", "不能用于侵犯", "必须遵守", "风险"
-    r"(?:不能|不得|禁止|不要|风险|必须遵守|必须检查)",
+    r"(?:不能|不得|禁止|不要|风险|必须遵守|必须检查|没有)",
     # Boundary statements: "不是万能", "不能保证", "不能承诺"
-    r"(?:不是万能|不能保证|不能承诺|不保证|并非)",
+    # Also handles Chinese brackets: "不是「万能爬虫」" → strip brackets → "不是万能爬虫"
+    r"(?:不是万能|不是.{0,3}万能|不能保证|不能承诺|不保证|并非)",
     # Negative framing / counter-example context: "可能浪费时间的", "不适合你"
     r"(?:可能浪费|不适合|不适用|不要期待|不要指望|❌|⚠️)",
     # Describing wrong expectations, not tool capabilities: "期待一个...的人"
     r"期待.{0,5}(?:一个|那种|那种能|能).{0,30}(?:的人|的读者|的用户)",
 ]
+
+
+def _collect_adjacent_lines(all_lines: list[str], idx: int, window: int = 3) -> list[str]:
+    """Collect adjacent lines within `window` distance (before and after)."""
+    adjacent = []
+    for offset in range(1, window + 1):
+        if idx - offset >= 0:
+            adjacent.append(all_lines[idx - offset])
+        if idx + offset < len(all_lines):
+            adjacent.append(all_lines[idx + offset])
+    return adjacent
 
 
 def _is_safe_context(line: str, signal: str) -> bool:
@@ -473,6 +492,8 @@ def _is_risk_safe_context(line: str, phrase: str, context_lines: list[str] | Non
     Checks the line itself AND optional adjacent lines for safe-context signals.
     Example: "绕过反爬措施可能触及法律" is a warning, not a claim.
     Example: A line with "万能爬虫" under "❌ **可能浪费时间的**" header is a counter-example.
+
+    Also normalizes Chinese brackets 「」 → "" so that "不是「万能爬虫」" matches "不是万能".
     """
     import re
 
@@ -481,9 +502,11 @@ def _is_risk_safe_context(line: str, phrase: str, context_lines: list[str] | Non
         lines_to_check.extend(context_lines)
 
     for check_line in lines_to_check:
+        # Normalize: strip Chinese brackets for pattern matching
+        normalized = check_line.replace("「", "").replace("」", "")
         for pattern in _RISK_SAFE_CONTEXT_PATTERNS:
             try:
-                if re.search(pattern, check_line):
+                if re.search(pattern, check_line) or re.search(pattern, normalized):
                     return True
             except re.error:
                 continue
@@ -651,11 +674,7 @@ def risk_boundary_check(content: str, project_type: str = "generic",
             all_lines = content.split("\n")
             for i, line in enumerate(all_lines):
                 if phrase in line:
-                    adjacent = []
-                    if i > 0:
-                        adjacent.append(all_lines[i - 1])
-                    if i < len(all_lines) - 1:
-                        adjacent.append(all_lines[i + 1])
+                    adjacent = _collect_adjacent_lines(all_lines, i, window=3)
                     if not _is_risk_safe_context(line, phrase, adjacent):
                         matching_lines.append(line.strip()[:150])
             if matching_lines:
@@ -669,11 +688,7 @@ def risk_boundary_check(content: str, project_type: str = "generic",
             all_lines = content.split("\n")
             for i, line in enumerate(all_lines):
                 if phrase in line:
-                    adjacent = []
-                    if i > 0:
-                        adjacent.append(all_lines[i - 1])
-                    if i < len(all_lines) - 1:
-                        adjacent.append(all_lines[i + 1])
+                    adjacent = _collect_adjacent_lines(all_lines, i, window=3)
                     if not _is_risk_safe_context(line, phrase, adjacent):
                         matching_lines.append(line.strip()[:150])
             if matching_lines:
