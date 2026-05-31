@@ -118,6 +118,11 @@ def build_parser() -> argparse.ArgumentParser:
     revise_parser = subparsers.add_parser("revise-pack", help="Generate revision notes for a publish pack")
     revise_parser.add_argument("pack_dir", help="Path to publish pack directory")
 
+    # publish-flow (Phase 19)
+    flow_parser = subparsers.add_parser("publish-flow", help="One-command publish flow: build → review → guide")
+    flow_parser.add_argument("repo", nargs="?", default=None,
+                              help="Repository full name (owner/repo). If omitted, auto-detects best candidate.")
+
     # Default to "daily" if no subcommand specified
     parser.set_defaults(command="daily", no_llm=False)
 
@@ -260,6 +265,26 @@ def cmd_daily(no_llm: bool = False) -> int:
 
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Phase 19: Persist top5 JSON for publish-pack auto-detection and daily-workflow display
+    top5_json_path = REPORTS_DIR / f"top5_{today}.json"
+    top5_data = []
+    for r in top5:
+        top5_data.append({
+            "full_name": r.full_name,
+            "name": r.name,
+            "score": r.score,
+            "stars": r.stars,
+            "description": r.description,
+            "language": r.language,
+            "publishability_score": r.publishability_score,
+            "content_type": r.content_type,
+            "topics": r.topics,
+            "pool": r.pool,
+        })
+    top5_json_path.write_text(
+        json.dumps(top5_data, ensure_ascii=False, indent=2), encoding="utf-8")
+    logger.info("Top5 JSON saved to %s", top5_json_path)
 
     # Daily report
     report_path = REPORTS_DIR / f"daily_report_{today}.md"
@@ -1419,6 +1444,143 @@ def cmd_revise_pack(pack_dir: str) -> int:
     return 0 if result["status"] == "ok" else 1
 
 
+def cmd_publish_flow(repo: str | None = None) -> int:
+    """Phase 19: One-command publish flow — build → review → guide.
+
+    Orchestrates the full publish pipeline:
+      1. Build publish pack (publish-pack)
+      2. Review the pack (review-pack)
+      3. Generate revision notes if needed (revise-pack)
+      4. Print next-step guidance
+
+    Does NOT auto-approve. The user must manually run approve-pack.
+
+    Returns:
+        0 on success (regardless of verdict), 1 on build failure.
+    """
+    from .publish_pack import build_publish_pack
+    from .publish_review import review_pack, revise_pack
+
+    print()
+    print("=" * 64)
+    print("  Publish Flow (Phase 19)")
+    print("=" * 64)
+    print()
+
+    # ── Step 1: Build publish pack ──
+    print("── Step 1/4: 构建发布包 ──")
+    print()
+    if repo:
+        print(f"  指定项目: {repo}")
+    else:
+        print("  自动检测最佳发布候选...")
+
+    build_result = build_publish_pack(repo)
+
+    if build_result["status"] != "ok":
+        print()
+        print(f"  ❌ 发布包构建失败: {build_result['status']}")
+        for w in build_result.get("warnings", []):
+            print(f"    {w}")
+        print()
+        print("  建议：")
+        print("    1. python run.py daily --no-llm  # 重新运行日更流程")
+        print("    2. python run.py content owner/repo  # 先生成内容包")
+        print("    3. python run.py review-queue  # 查看审核队列")
+        print()
+        print("=" * 64)
+        return 1
+
+    pack_dir = build_result["pack_dir"]
+    manifest = build_result.get("manifest", {})
+    print(f"  项目: {build_result['repo']}")
+    print(f"  内容模式: {manifest.get('source_mode', 'unknown')}")
+    print(f"  发布包目录: {pack_dir}")
+    print()
+
+    # ── Step 2: Review ──
+    print("── Step 2/4: 内容审核 ──")
+    print()
+
+    report = review_pack(pack_dir)
+    verdict_icons = {"ready": "✅ 可发布", "needs_revision": "⚠️ 需修改",
+                     "rejected": "🔴 不建议发布"}
+    print(f"  审核判决: {verdict_icons.get(report.verdict, report.verdict)}")
+    print(f"  综合评分: {report.overall_score}/100")
+    print(f"  阻断问题: {len(report.blocking_issues)} 个")
+    print(f"  风险提示: {report.risk_blocking_count} 个")
+    print()
+
+    if report.blocking_issues:
+        print("  🔴 阻断问题:")
+        for bi in report.blocking_issues:
+            print(f"    - {bi}")
+        print()
+
+    # ── Step 3: Revision notes (if needed) ──
+    print("── Step 3/4: 改稿建议 ──")
+    print()
+
+    if report.verdict == "needs_revision":
+        rev_result = revise_pack(pack_dir)
+        if rev_result["status"] == "ok":
+            print(f"  📝 已生成改稿建议: {pack_dir}/07_revision_notes.md")
+            print(f"  问题数: {rev_result.get('issues_count', 0)} 个")
+        else:
+            print(f"  ⚠️ 改稿建议生成失败: {rev_result.get('reason', 'unknown')}")
+    elif report.verdict == "rejected":
+        print("  ⏭️ 包被拒绝，跳过改稿建议。请先解决阻断问题后重新生成内容包。")
+    else:
+        print("  ✅ 无需改稿，内容已就绪。")
+
+    print()
+
+    # ── Step 4: Next-step guidance ──
+    print("── Step 4/4: 下一步指引 ──")
+    print()
+
+    if report.verdict == "ready":
+        print("  ✅ 审核通过！内容可以发布。")
+        print()
+        print("  📋 人工操作步骤：")
+        print(f"    1. 通读各平台 ready 文件: {pack_dir}")
+        print(f"    2. 确认无误后批准发布包：")
+        print(f"       python run.py approve-pack {pack_dir}")
+        print(f"    3. 手动复制到各平台发布")
+        print()
+        print("  ⚠️ 批准命令需要你手动执行，publish-flow 不会自动批准。")
+    elif report.verdict == "needs_revision":
+        print("  ⚠️ 需要修改后才能发布。")
+        print()
+        print("  📋 人工操作步骤：")
+        print(f"    1. 阅读改稿建议: {pack_dir}/07_revision_notes.md")
+        print(f"    2. 阅读审核报告: {pack_dir}/06_review_report.md")
+        print(f"    3. 修改各平台 ready 文件中的内容")
+        print(f"    4. 修改后重新运行审核：")
+        print(f"       python run.py review-pack {pack_dir}")
+        print(f"    5. 审核通过后批准：")
+        print(f"       python run.py approve-pack {pack_dir}")
+        print()
+        print("  或者重新生成内容包：")
+        repo_name = build_result["repo"]
+        print(f"    python run.py content {repo_name}")
+        print(f"    python run.py publish-flow {repo_name}")
+    elif report.verdict == "rejected":
+        print("  🔴 不建议发布此内容包。")
+        print()
+        print("  📋 建议操作：")
+        print("    1. 解决阻断问题后重新生成内容包")
+        repo_name = build_result["repo"]
+        print(f"       python run.py content {repo_name}  # 重新生成")
+        print(f"    2. 或者选择其他候选项目：")
+        print(f"       python run.py review-queue  # 查看审核队列")
+        print(f"       python run.py publish-pack  # 自动选择其他候选")
+        print()
+
+    print("=" * 64)
+    return 0
+
+
 def cmd_llm_doctor() -> int:
     """Phase 15: Diagnose LLM provider connectivity.
 
@@ -1680,6 +1842,8 @@ def main() -> int:
         return cmd_reject_pack(args.pack_dir, args.reason)
     elif args.command == "revise-pack":
         return cmd_revise_pack(args.pack_dir)
+    elif args.command == "publish-flow":
+        return cmd_publish_flow(args.repo)
     elif args.command == "content":
         if not args.repo:
             parser.error("content command requires a repo argument (owner/repo)")

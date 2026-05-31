@@ -149,3 +149,34 @@ class TestDataDirectorySafety:
         tracked = result.stdout.strip()
         assert tracked == "", \
             ".env must not be tracked by git"
+
+    def test_publish_packs_not_tracked(self):
+        """data/publish_packs/ 不应有已跟踪文件."""
+        import subprocess
+        root = _get_project_root()
+        result = subprocess.run(
+            ["git", "ls-files", "data/publish_packs/"],
+            cwd=str(root), capture_output=True, text=True
+        )
+        tracked = result.stdout.strip()
+        assert tracked == "", \
+            f"data/publish_packs/ must have no tracked files, got: {tracked}"
+
+
+# ── Phase 19: CLI Command Registration ─────────────────────────────────
+
+class TestPublishFlowCommand:
+    """Verify Phase 19 publish-flow subcommand is registered."""
+
+    def test_publish_flow_command_exists(self):
+        """publish-flow should be a registered subcommand."""
+        from src.main import build_parser
+
+        parser = build_parser()
+        subcommands = []
+        for action in parser._actions:
+            if getattr(action, 'choices', None) is not None:
+                subcommands = list(action.choices.keys())
+                break
+
+        assert "publish-flow" in subcommands
