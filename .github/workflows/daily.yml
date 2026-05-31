@@ -5,9 +5,45 @@ on:
     # UTC 00:00 = 北京时间 08:00
     - cron: '0 0 * * *'
   workflow_dispatch:  # Manual trigger for testing
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run pytest
+        run: python -m pytest tests/ -v
+
+      - name: Run doctor
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: python run.py doctor
+
+      - name: Run quality-gate
+        run: python run.py quality-gate
+
+      - name: Run benchmark
+        run: python run.py benchmark
+
   daily:
+    needs: test
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -31,7 +67,7 @@ jobs:
           LLM_API_BASE: ${{ secrets.LLM_API_BASE }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: ${{ secrets.LLM_MODEL }}
-        run: python -m src.main daily
+        run: python run.py daily
 
       - name: Commit state changes
         run: |

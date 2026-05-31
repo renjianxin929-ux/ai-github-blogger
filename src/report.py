@@ -872,7 +872,67 @@ def generate_review_queue(
         "",
     ]
 
-    # ── Category 1: High Confidence Top 5 ───────────────────────────
+    # ── Section 0: Most Recommended Today ─────────────────────────
+    lines.append("## 零、今日最推荐发布")
+    lines.append("")
+    if top5:
+        best = top5[0]
+        bv = score_business_value(best)
+        pf = score_platform_fit(best)
+        risk = assess_risk(best)
+        reasons = []
+        if best.score >= 70:
+            reasons.append(f"高选题分({best.score:.0f}/100)")
+        if best.stars >= 1000:
+            reasons.append(f"高Star数({best.stars})")
+        if best.license:
+            reasons.append(f"许可证明确({best.license})")
+        if best.topics:
+            ai_topics = [t for t in best.topics if any(k in t.lower() for k in ("ai", "llm", "ml", "agent", "gpt"))]
+            if ai_topics:
+                reasons.append(f"AI相关话题({', '.join(ai_topics[:3])})")
+        if (best.readme or "").strip() and len(best.readme or "") > 500:
+            reasons.append("README 质量高")
+
+        risk_points = []
+        if risk.overall == "medium":
+            risk_points.append("风险中等级，建议人工确认")
+        elif risk.overall == "high":
+            risk_points.append("高风险，不建议发布")
+        if best.stars < 100:
+            risk_points.append("低 Star 数，质量待验证")
+        if not best.license:
+            risk_points.append("许可证不明，商用需注意")
+        if best.content_type == "unclear":
+            risk_points.append("README 信息不足，需人工补充")
+
+        platforms = pf.best_platform or "深度分析"
+        suitable = [platforms]
+        if pf.xiaohongshu >= 60:
+            suitable.append("小红书")
+        if pf.douyin >= 60:
+            suitable.append("抖音")
+        if pf.wechat >= 60:
+            suitable.append("公众号")
+
+        needs_edit = "是" if (risk_points or best.content_type == "unclear") else "否"
+        ready_for_content = "是" if (best.score >= 65 and risk.overall in ("low", "none")) else "需人工审核后决定"
+
+        lines.append(f"| 项目 | [{best.full_name}]({best.url}) |")
+        lines.append(f"| 评分 | {best.score:.0f}/100 |")
+        lines.append(f"| 为什么推荐 | {'；'.join(reasons) if reasons else '规则综合评分最高'} |")
+        lines.append(f"| 风险点 | {'；'.join(risk_points) if risk_points else '无重大风险'} |")
+        lines.append(f"| 适合平台 | {'、'.join(suitable)} |")
+        lines.append(f"| 是否需要人工改稿 | {needs_edit} |")
+        lines.append(f"| 是否可进入 content 生成 | {ready_for_content} |")
+        if ready_for_content == "是":
+            lines.append(f"| 操作 | `python run.py content {best.full_name}` |")
+        lines.append("")
+    else:
+        lines.append("> 今日无高置信度 Top 5 选题，无法推荐。")
+        lines.append("")
+    lines.append("---")
+    lines.append("")
     lines.append("## 一、高置信度 Top 5（可直接采用）")
     lines.append("")
     if top5:
@@ -942,12 +1002,25 @@ def generate_review_queue(
     lines.append("## 三、已拦截项目（不建议采用）")
     lines.append("")
     if high_risk:
-        lines.append("| # | 项目 | 拦截原因 | 风险评估 |")
-        lines.append("|---|------|----------|----------|")
         for i, r in enumerate(high_risk[:10], 1):
             risk = assess_risk(r)
             reason = r.filter_reason or "高风险项目"
-            lines.append(f"| {i} | {r.full_name} | {reason} | {risk.overall} |")
+            lines.append(f"### 🚫 {r.full_name} — 已拦截")
+            lines.append("")
+            lines.append(f"| 项目 | {r.full_name} |")
+            lines.append(f"| 拦截原因 | {reason} |")
+            lines.append(f"| 风险等级 | {risk.overall} |")
+            lines.append(f"| 建议 | 不发布。此项目不符合安全策略，已自动拦截。 |")
+            # Show what keywords triggered the block
+            if hasattr(r, 'ai_evidence') and isinstance(r.ai_evidence, list) and r.ai_evidence:
+                keywords = [str(k) for k in r.ai_evidence[:5] if not str(k).startswith("WEAK:")]
+                if keywords:
+                    lines.append(f"| 触发信号 | {', '.join(keywords)} |")
+            elif hasattr(r, 'ai_evidence') and isinstance(r.ai_evidence, dict):
+                keywords = r.ai_evidence.get("risk_keywords", [])
+                if keywords:
+                    lines.append(f"| 触发关键词 | {', '.join(keywords[:5])} |")
+            lines.append("")
         lines.append("")
     else:
         lines.append("> 今日无被拦截项目。")

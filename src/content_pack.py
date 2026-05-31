@@ -931,6 +931,7 @@ def _try_generate_file(
 def generate_content_pack(
     repo_full_name: str, output_dir: Path | None = None,
     max_retries: int = 3, timeout_seconds: float = 120.0,
+    dry_run: bool = False,
 ) -> tuple[Path, str]:
     """Generate a complete V2 content pack for a repo (Phase 7: retry + degraded).
 
@@ -940,6 +941,7 @@ def generate_content_pack(
     4. Write results to {output_dir}/{slug}/
     5. Mark repo as generated in state
 
+    If dry_run=True: no LLM calls, no file writes — estimate only.
     Returns (pack_dir, status) where status is "ok", "degraded", or "failed".
     """
     import signal
@@ -991,6 +993,16 @@ def generate_content_pack(
         description=scored.description or "",
         ctx=ctx,
     )
+
+    # 4. Dry-run early return — no LLM, no file writes
+    if dry_run:
+        slug = slugify_repo_name(repo_full_name)
+        pack_dir = output_dir / slug
+        llm_available = _has_llm()
+        mode = "LLM" if llm_available else "No-LLM"
+        logger.info("Dry-run: would generate %d files in %s mode for %s",
+                     len(CONTENT_FILES_V2), mode, repo_full_name)
+        return pack_dir, "ok"
 
     # 4. Prepare output directory
     slug = slugify_repo_name(repo_full_name)

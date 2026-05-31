@@ -53,48 +53,74 @@ LLM_MODEL=deepseek-chat
 ### 4. 运行
 
 ```bash
+# 每日一键工作流（环境检查 → 选题 → 质量检查，推荐日常使用）
+python run.py daily-workflow
+
+# 端到端验证（不消耗 LLM token，不写内容包）
+python run.py dry-run
+
+# 查看人工审核清单
+python run.py review-queue
+
 # 完整日更流程（抓取 → 去重 → 评分 → LLM 分析 → 报告）
-python -m src.main daily
+python run.py daily
 
 # 跳过 LLM 分析（仅打分 + 候选报告）
-python -m src.main daily --no-llm
+python run.py daily --no-llm
 
-# 仅抓取
-python -m src.main fetch
+# 对指定仓库生成内容包（11 种内容文件）
+python run.py content owner/repo
 
-# 仅打分排名
-python -m src.main score
+# 环境健康检查
+python run.py doctor
 
-# 生成候选报告
-python -m src.main report
+# 质量门评估
+python run.py quality-gate
 
-# 对指定仓库生成内容包
-python -m src.main content owner/repo
+# 评分系统基准测试
+python run.py benchmark
 ```
 
 ## 项目结构
 
 ```
 ai-github-blogger/
-├── .github/workflows/daily.yml       # GitHub Actions 自动运行
-├── templates/                         # LLM prompt 模板（10个）
+├── .github/workflows/daily.yml       # GitHub Actions CI（test → daily）
+├── templates/                         # LLM prompt 模板（13个）
 ├── src/
-│   ├── main.py                        # CLI 入口
+│   ├── main.py                        # CLI 入口（9个子命令）
 │   ├── config.py                      # 配置管理
 │   ├── fetcher.py                     # 数据抓取（RSS + API）
 │   ├── enricher.py                    # 数据增强（GitHub API）
 │   ├── dedup.py                       # 去重与状态管理
-│   ├── scorer.py                      # 规则打分引擎
+│   ├── scorer.py                      # 规则打分引擎 + 分类
 │   ├── analyzer.py                    # LLM 分析（OpenAI-compatible）
-│   ├── report.py                      # 报告生成
-│   └── content_pack.py               # 多平台内容包
-├── tests/                             # 60 个单元测试
+│   ├── reviewer.py                    # 自动审稿管线（6项检查）
+│   ├── report.py                      # 报告生成（daily/review/brief）
+│   ├── content_pack.py               # 多平台内容包（11文件）
+│   ├── business_score.py              # 商业价值评分
+│   ├── platform_score.py              # 平台适配评分
+│   ├── risk_score.py                  # 风险评分
+│   ├── quality_gate.py               # 质量门（15条件）
+│   ├── benchmark.py                   # 评分系统基准测试
+│   └── error_handler.py              # 错误处理模块
+├── tests/                             # 185 个单元测试
 ├── data/
-│   ├── reports/                       # 每日报告输出
+│   ├── reports/                       # 每日报告输出（gitignore）
 │   ├── state/                         # 去重状态（git 跟踪）
-│   └── content_packs/                 # 生成的内容包
+│   └── content_packs/                 # 生成的内容包（gitignore）
+├── docs/                              # 文档
+│   ├── DAILY_WORKFLOW.md              # 每日工作流指南
+│   ├── QUICKSTART.md                  # 快速开始
+│   ├── SCORING_SYSTEM.md              # 评分系统说明
+│   ├── SAFETY_BOUNDARY.md             # 安全边界与风险控制
+│   ├── CONTENT_PACK_GUIDE.md          # 内容包使用指南
+│   ├── LLM_SETUP.md                   # LLM API 配置
+│   ├── REVIEW_CHECKLIST.md            # 发布前审核清单
+│   └── TROUBLESHOOTING.md             # 常见问题排障
 ├── requirements.txt
 ├── .env.example
+├── run.py                             # 入口脚本（自动设置 sys.path）
 └── README.md
 ```
 
