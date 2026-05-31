@@ -33,6 +33,7 @@ from . import config
 from .analyzer import FDEAnalysis, ai_fde_analyze
 from .benchmark import cmd_benchmark
 from .publish_pack import build_publish_pack
+from .publish_review import review_pack, approve_pack, reject_pack, revise_pack
 from .quality_gate import cmd_quality_gate
 from .config import (
     MAX_REPOS_TO_ANALYZE,
@@ -99,6 +100,23 @@ def build_parser() -> argparse.ArgumentParser:
     publish_parser = subparsers.add_parser("publish-pack", help="Build publish handoff pack for manual publishing")
     publish_parser.add_argument("repo", nargs="?", default=None,
                                 help="Repository full name (owner/repo). If omitted, auto-detects best candidate.")
+
+    # review-pack (Phase 18)
+    review_parser = subparsers.add_parser("review-pack", help="Review a publish pack")
+    review_parser.add_argument("pack_dir", help="Path to publish pack directory")
+
+    # approve-pack (Phase 18)
+    approve_parser = subparsers.add_parser("approve-pack", help="Approve a publish pack for publishing")
+    approve_parser.add_argument("pack_dir", help="Path to publish pack directory")
+
+    # reject-pack (Phase 18)
+    reject_parser = subparsers.add_parser("reject-pack", help="Reject a publish pack")
+    reject_parser.add_argument("pack_dir", help="Path to publish pack directory")
+    reject_parser.add_argument("--reason", required=True, help="Reason for rejection")
+
+    # revise-pack (Phase 18)
+    revise_parser = subparsers.add_parser("revise-pack", help="Generate revision notes for a publish pack")
+    revise_parser.add_argument("pack_dir", help="Path to publish pack directory")
 
     # Default to "daily" if no subcommand specified
     parser.set_defaults(command="daily", no_llm=False)
@@ -1227,6 +1245,180 @@ def cmd_publish_pack(repo_full_name: str | None = None) -> int:
     return 0
 
 
+def cmd_review_pack(pack_dir: str) -> int:
+    """Phase 18: Review a publish pack and generate 06_review_report.md.
+
+    Returns:
+        0 on success (regardless of verdict), 1 on error.
+    """
+    print()
+    print("=" * 64)
+    print("  Publish Pack Review (Phase 18)")
+    print("=" * 64)
+    print()
+
+    pack = Path(pack_dir)
+    if not pack.exists():
+        print(f"  ❌ 发布包目录不存在: {pack_dir}")
+        print()
+        return 1
+
+    manifest_path = pack / "00_publish_manifest.json"
+    if not manifest_path.exists():
+        print(f"  ❌ 该目录不是有效的发布包（缺少 00_publish_manifest.json）: {pack_dir}")
+        print()
+        return 1
+
+    report = review_pack(pack_dir)
+
+    verdict_icons = {"ready": "✅ 可发布", "needs_revision": "⚠️ 需修改后发布",
+                     "rejected": "🔴 不建议发布"}
+    print(f"  项目: {pack.name}")
+    print(f"  审核判决: {verdict_icons.get(report.verdict, report.verdict)}")
+    print(f"  综合评分: {report.overall_score}/100")
+    print(f"  阻断问题: {len(report.blocking_issues)} 个")
+    print(f"  风险问题: {report.risk_blocking_count} 个")
+    print(f"  CTA 缺失: {len(report.cta_issues)} 个")
+    print()
+
+    if report.blocking_issues:
+        print("  🔴 阻断问题:")
+        for bi in report.blocking_issues:
+            print(f"    - {bi}")
+        print()
+
+    if report.risk_issues:
+        print("  ⚠️ 风险提示:")
+        for ri in report.risk_issues:
+            print(f"    - {ri}")
+        print()
+
+    if report.cta_issues:
+        print("  📢 CTA 缺失:")
+        for ci in report.cta_issues:
+            print(f"    - {ci}")
+        print()
+
+    print(f"  详细报告: {pack_dir}/06_review_report.md")
+    print()
+    print("=" * 64)
+    return 0
+
+
+def cmd_approve_pack(pack_dir: str) -> int:
+    """Phase 18: Approve a publish pack for publishing.
+
+    Returns:
+        0 on success, 1 on blocked/gate failure.
+    """
+    print()
+    print("=" * 64)
+    print("  Publish Pack Approval (Phase 18)")
+    print("=" * 64)
+    print()
+
+    pack = Path(pack_dir)
+    if not pack.exists():
+        print(f"  ❌ 发布包目录不存在: {pack_dir}")
+        print()
+        return 1
+
+    result = approve_pack(pack_dir)
+
+    if result["status"] == "ok":
+        print(f"  ✅ 发布包已批准")
+        print(f"  批准时间: {result.get('approved_at', 'N/A')}")
+        print(f"  交接摘要: {pack_dir}/07_handoff_summary.md")
+        print()
+        print("  📋 下一步:")
+        print("    1. 阅读 07_handoff_summary.md 发布清单")
+        print("    2. 手动复制内容到各平台发布")
+        print("    3. 记录各平台发布链接")
+    else:
+        print(f"  ❌ 批准失败")
+        print(f"  原因: {result.get('reason', 'unknown')}")
+    print()
+    print("=" * 64)
+    return 0 if result["status"] == "ok" else 1
+
+
+def cmd_reject_pack(pack_dir: str, reason: str) -> int:
+    """Phase 18: Reject a publish pack.
+
+    Returns:
+        0 on success, 1 on blocked/failure.
+    """
+    print()
+    print("=" * 64)
+    print("  Publish Pack Rejection (Phase 18)")
+    print("=" * 64)
+    print()
+
+    pack = Path(pack_dir)
+    if not pack.exists():
+        print(f"  ❌ 发布包目录不存在: {pack_dir}")
+        print()
+        return 1
+
+    result = reject_pack(pack_dir, reason)
+
+    if result["status"] == "ok":
+        print(f"  🔴 发布包已拒绝")
+        print(f"  拒绝时间: {result.get('rejected_at', 'N/A')}")
+        print(f"  拒绝原因: {result.get('rejected_reason', 'N/A')}")
+        print(f"  拒绝记录: {pack_dir}/07_rejection_record.md")
+        print()
+        print("  📋 下一步:")
+        print("    1. 根据拒绝原因修改内容")
+        print("    2. 重新运行 python run.py publish-pack 生成新发布包")
+        print("    3. 再次运行 python run.py review-pack 检查")
+    else:
+        print(f"  ❌ 拒绝失败")
+        print(f"  原因: {result.get('reason', 'unknown')}")
+    print()
+    print("=" * 64)
+    return 0 if result["status"] == "ok" else 1
+
+
+def cmd_revise_pack(pack_dir: str) -> int:
+    """Phase 18: Generate revision notes for a publish pack.
+
+    Returns:
+        0 on success, 1 on blocked/failure.
+    """
+    print()
+    print("=" * 64)
+    print("  Publish Pack Revision Notes (Phase 18)")
+    print("=" * 64)
+    print()
+
+    pack = Path(pack_dir)
+    if not pack.exists():
+        print(f"  ❌ 发布包目录不存在: {pack_dir}")
+        print()
+        return 1
+
+    result = revise_pack(pack_dir)
+
+    if result["status"] == "ok":
+        print(f"  📝 改稿建议已生成")
+        print(f"  问题数: {result.get('issues_count', 0)} 个")
+        print(f"  改稿建议: {pack_dir}/07_revision_notes.md")
+        print()
+        print("  ⚠️ 正文文件未被修改，仅生成了改稿建议供人工参考。")
+        print()
+        print("  📋 下一步:")
+        print("    1. 阅读 07_revision_notes.md 改稿建议")
+        print("    2. 手动修改对应文件")
+        print("    3. 修改完成后运行 python run.py review-pack 重新检查")
+    else:
+        print(f"  ❌ 改稿建议生成失败")
+        print(f"  原因: {result.get('reason', 'unknown')}")
+    print()
+    print("=" * 64)
+    return 0 if result["status"] == "ok" else 1
+
+
 def cmd_llm_doctor() -> int:
     """Phase 15: Diagnose LLM provider connectivity.
 
@@ -1480,6 +1672,14 @@ def main() -> int:
         return cmd_llm_doctor()
     elif args.command == "publish-pack":
         return cmd_publish_pack(args.repo)
+    elif args.command == "review-pack":
+        return cmd_review_pack(args.pack_dir)
+    elif args.command == "approve-pack":
+        return cmd_approve_pack(args.pack_dir)
+    elif args.command == "reject-pack":
+        return cmd_reject_pack(args.pack_dir, args.reason)
+    elif args.command == "revise-pack":
+        return cmd_revise_pack(args.pack_dir)
     elif args.command == "content":
         if not args.repo:
             parser.error("content command requires a repo argument (owner/repo)")
