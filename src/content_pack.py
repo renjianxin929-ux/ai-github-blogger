@@ -983,6 +983,15 @@ def generate_content_pack(
     # 3. Build context
     ctx = _build_repo_context(scored)
 
+    # Determine project type for boundary-driven reviewer checks
+    from .reviewer import classify_project_type as _classify_project_type
+    ctx["project_type"] = _classify_project_type(
+        repo_full_name=repo_full_name,
+        topics=scored.topics,
+        description=scored.description or "",
+        ctx=ctx,
+    )
+
     # 4. Prepare output directory
     slug = slugify_repo_name(repo_full_name)
     pack_dir = output_dir / slug
@@ -1033,10 +1042,9 @@ def generate_content_pack(
                 is_light_file = file_name in REVIEWER_LIGHT_FILES
 
                 if is_content_file or is_light_file:
-                    is_geo = "geo" in file_name
                     outcome = reviewer.run_reviewer_pipeline(
                         file_name, content, repo_full_name, ctx=ctx,
-                        geo_boundary=is_geo,
+                        project_type=ctx.get("project_type", "generic"),
                         strict_mode=is_content_file,
                     )
 
@@ -1054,7 +1062,8 @@ def generate_content_pack(
                         if not degraded2:
                             outcome2 = reviewer.run_reviewer_pipeline(
                                 file_name, content2, repo_full_name, ctx=ctx,
-                                geo_boundary=is_geo, strict_mode=is_content_file,
+                                project_type=ctx.get("project_type", "generic"),
+                                strict_mode=is_content_file,
                             )
                             if outcome2.passed:
                                 content = content2

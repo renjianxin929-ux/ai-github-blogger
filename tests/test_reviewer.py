@@ -16,7 +16,7 @@ class TestRepoConsistencyCheck:
         assert result.score >= 60
 
     def test_detects_wrong_project_signals_when_3plus(self):
-        """Should detect 3+ wrong-project signals in a scraping tool post."""
+        """Should detect 3+ wrong-project signals for a web_scraping_api project."""
         from src.reviewer import repo_consistency_check
 
         content = (
@@ -25,7 +25,9 @@ class TestRepoConsistencyCheck:
             "深度适配 ChatGLM 和 Baichuan 等国内开源模型。\n"
             "非 AI 工程师也能一键构建知识库问答系统。\n"
         )
-        result = repo_consistency_check(content, "firecrawl/firecrawl")
+        result = repo_consistency_check(
+            content, "firecrawl/firecrawl", project_type="web_scraping_api",
+        )
 
         assert not result.passed
         assert len(result.issues) >= 3
@@ -90,25 +92,25 @@ class TestRiskBoundaryCheck:
         assert not result.passed
         assert len(result.issues) >= 3  # 任意网页, 绕过反爬, 像真人一样
 
-    def test_geo_boundary_checks_hard_promises(self):
-        """Should detect hard GEO promises."""
+    def test_scraping_api_blocks_hard_promises(self):
+        """web_scraping_api should block '保证 AI 引用' as forbidden claim."""
         from src.reviewer import risk_boundary_check
 
         content = "使用 Firecrawl 可以保证提升 AI 引用和排名。"
-        result = risk_boundary_check(content, geo_boundary=True)
+        result = risk_boundary_check(content, project_type="web_scraping_api")
 
         assert not result.passed
         assert any("保证" in i for i in result.issues)
 
     def test_scraping_tool_missing_disclaimers_strict(self):
-        """In strict mode, should flag missing robots.txt/copyright/privacy in scraping content."""
+        """In strict mode, web_scraping_api should flag missing disclaimers."""
         from src.reviewer import risk_boundary_check
 
         content = "这个爬虫工具非常好用，可以抓取各种网站数据。"
-        result = risk_boundary_check(content, strict_mode=True)
+        result = risk_boundary_check(content, project_type="web_scraping_api", strict_mode=True)
 
         assert not result.passed
-        assert any("robots.txt" in i or "版权" in i or "隐私" in i for i in result.issues)
+        assert any("风险提醒" in i for i in result.issues)
 
     def test_scraping_tool_non_strict_skips_disclaimers(self):
         """In non-strict mode, should NOT flag missing disclaimers (only explicit exaggerations)."""
@@ -185,12 +187,13 @@ class TestRunReviewerPipeline:
 
         ctx = {
             "confirmed_features": ["网页抓取 API"],
-            "unsupported_features": ["知识库平台", "向量数据库（不是 Milvus、Chroma）"],
+            "unsupported_features": ["知识库平台", "向量数据库"],
             "risk_boundaries": ["遵守 robots.txt"],
         }
 
         outcome = run_reviewer_pipeline(
-            "01_ai_fde_deep_analysis", content, "firecrawl/firecrawl", ctx=ctx,
+            "01_ai_fde_deep_analysis", content, "firecrawl/firecrawl",
+            ctx=ctx, project_type="web_scraping_api",
         )
 
         assert not outcome.passed
@@ -418,3 +421,150 @@ class TestQualityReportNoStaleExamples:
                 assert name not in content, (
                     f"Stale project name '{name}' leaked into report with empty unsupported_features"
                 )
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Phase 12: Cross-project boundary tests — project-type-driven checks
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestCrossProjectBoundary:
+    """Verify each project type gets correct boundary rules, not hardcoded GEO."""
+
+    # ── Positive: each project type should NOT be mis-classified ──
+
+    def test_firecrawl_is_web_scraping_api_not_rag(self):
+        """Firecrawl → web_scraping_api, not rag_engine."""
+        from src.reviewer import classify_project_type, get_project_boundary
+
+        pt = classify_project_type("mendableai/firecrawl", topics=["scraping", "crawl", "api"])
+        assert pt == "web_scraping_api", f"Expected web_scraping_api, got {pt}"
+
+        boundary = get_project_boundary(pt)
+        assert "万能爬虫" in boundary.blocking_phrases
+        assert any("抓取" in c or "爬取" in c for c in boundary.allowed_claims)
+
+    def test_browser_use_is_browser_automation_not_geo_tool(self):
+        """browser-use → browser_automation, not GEO tool."""
+        from src.reviewer import classify_project_type, get_project_boundary
+
+        pt = classify_project_type(
+            "browser-use/browser-use",
+            topics=["browser-automation", "ai-agent", "playwright"],
+            description="AI agent for browser automation",
+        )
+        assert pt == "browser_automation", f"Expected browser_automation, got {pt}"
+
+        boundary = get_project_boundary(pt)
+        # Must NOT claim to be a GEO tool
+        assert "GEO 工具" in boundary.forbidden_claims
+        # Must have "不绕过安全措施" boundary signal
+        assert boundary.required_boundary_signals
+
+    def test_ragflow_is_rag_engine_not_scraping_api(self):
+        """RAGFlow → rag_engine, not web_scraping_api."""
+        from src.reviewer import classify_project_type, get_project_boundary
+
+        pt = classify_project_type(
+            "infiniflow/ragflow",
+            topics=["rag", "knowledge-base", "document-qa", "retrieval"],
+            description="RAG engine for enterprise document Q&A",
+        )
+        assert pt == "rag_engine", f"Expected rag_engine, got {pt}"
+
+        boundary = get_project_boundary(pt)
+        assert "爬虫 API" in boundary.blocking_phrases
+        assert "实时搜索替代" in boundary.blocking_phrases
+
+    def test_awesome_mcp_is_resource_list_not_runnable_product(self):
+        """awesome-mcp-servers → resource_list, not runnable platform."""
+        from src.reviewer import classify_project_type, get_project_boundary
+
+        pt = classify_project_type(
+            "punkpeye/awesome-mcp-servers",
+            topics=["awesome-list", "mcp", "curated"],
+            description="A curated list of MCP servers",
+        )
+        assert pt == "resource_list", f"Expected resource_list, got {pt}"
+
+        boundary = get_project_boundary(pt)
+        assert "可直接运行的产品" in boundary.forbidden_claims
+        assert any("资源" in c or "清单" in c or "列表" in c for c in boundary.allowed_claims)
+
+    # ── Negative: high-risk must be blocked ──
+
+    def test_deepfake_classified_as_high_risk(self):
+        """Deep-Live-Cam → high_risk."""
+        from src.reviewer import classify_project_type
+
+        pt = classify_project_type(
+            "hacksider/Deep-Live-Cam",
+            topics=["deepfake", "face-swap", "ai"],
+            description="Real-time face swapping and deepfake tool",
+        )
+        assert pt == "high_risk", f"Expected high_risk, got {pt}"
+
+    def test_phishing_tool_classified_as_high_risk(self):
+        """Phishing/scraping-abuse → high_risk."""
+        from src.reviewer import classify_project_type
+
+        pt = classify_project_type(
+            "evil/scraper-tool",
+            topics=["phishing", "credential-harvesting"],
+            description="Advanced credential harvesting toolkit",
+        )
+        assert pt == "high_risk", f"Expected high_risk, got {pt}"
+
+    # ── Negative: forbidden claims must be detected ──
+
+    def test_ai_ranking_guarantee_blocked_in_any_project(self):
+        """'保证 AI 排名' must be blocked regardless of project type."""
+        from src.reviewer import risk_boundary_check
+
+        content = "这个工具能保证 AI 引用和排名，让所有网站都收录你的内容。"
+
+        for pt in ["web_scraping_api", "browser_automation", "rag_engine", "generic"]:
+            result = risk_boundary_check(content, project_type=pt)
+            assert not result.passed, f"pt={pt}: '保证 AI 引用/排名' should be blocked"
+            assert any("保证" in i for i in result.issues), (
+                f"pt={pt}: should have '保证' in issues, got {result.issues}"
+            )
+
+    def test_bypass_login_blocked_in_scraping_and_browser(self):
+        """'绕过登录' must be blocked in web_scraping_api and browser_automation."""
+        from src.reviewer import risk_boundary_check
+
+        content = "使用这个工具可以绕过登录和验证码，自动登入任何网站后台。"
+
+        # web_scraping_api: must block
+        r1 = risk_boundary_check(content, project_type="web_scraping_api")
+        assert not r1.passed
+
+        # browser_automation: must block
+        r2 = risk_boundary_check(content, project_type="browser_automation")
+        assert not r2.passed
+
+        # rag_engine: should also block (in blocking_phrases)
+        r3 = risk_boundary_check(content, project_type="rag_engine")
+        assert not r3.passed
+
+    def test_resource_list_written_as_platform_needs_review(self):
+        """resource_list content claiming to be a runnable platform should be flagged."""
+        from src.reviewer import risk_boundary_check
+
+        content = (
+            "Awesome MCP 是一个可直接运行的生产级平台，"
+            "一键部署即可接入数百个API和SDK。"
+        )
+        result = risk_boundary_check(content, project_type="resource_list")
+        assert not result.passed
+        issues_text = " ".join(result.issues)
+        assert "可直接运行" in issues_text or "平台" in issues_text or "资源" in issues_text
+
+    def test_generic_project_blocks_universal_forbidden_phrases(self):
+        """Even generic project type should block '保证 AI 引用' and '绕过登录'."""
+        from src.reviewer import risk_boundary_check
+
+        content = "这个工具可以绕过登录验证，保证AI引用排名。"
+        result = risk_boundary_check(content, project_type="generic")
+        assert not result.passed
+        assert len(result.issues) >= 1

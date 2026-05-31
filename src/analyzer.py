@@ -266,57 +266,99 @@ def _derive_confirmed_features(repo: ScoredRepo) -> list[str]:
 
 
 def _derive_unsupported_features(repo: ScoredRepo) -> list[str]:
-    """Derive features explicitly NOT belonging to this repo type."""
-    topics = [t.lower() for t in (repo.topics or [])]
+    """Derive features explicitly NOT belonging to this repo type.
 
-    unsupported = []
-    # If it's a scraping/crawling tool, it is NOT a knowledge base / RAG platform
-    if any(k in topics for k in ("scrap", "crawl", "web-data")):
-        unsupported.extend([
+    Uses project-type classification to produce type-specific unsupported lists
+    instead of hardcoding for just one project type.
+    """
+    from .reviewer import classify_project_type as _classify_project_type
+
+    topics = [t.lower() for t in (repo.topics or [])]
+    project_type = _classify_project_type(
+        repo_full_name=repo.full_name,
+        topics=topics,
+        description=repo.description or "",
+    )
+
+    unsupported_map = {
+        "web_scraping_api": [
             "知识库 / RAG 平台 / 向量数据库（与当前项目定位不符）",
             "LLM 推理 / 模型部署 / ChatBot 框架",
-            "中文分词 / 中文语义理解专用工具",
             "LangChain / LlamaIndex 等 AI 编排框架",
-            "知识图谱构建 / 实体抽取引擎",
-        ])
+            "中文分词 / 中文语义理解专用工具",
+        ],
+        "browser_automation": [
+            "GEO 工具 / AI 搜索排名优化工具（与当前项目定位不符）",
+            "网页数据抓取 API / 爬虫服务",
+            "SEO 优化工具 / 搜索引擎优化平台",
+            "能保证 AI 引用 / 排名 / 询盘增长",
+        ],
+        "rag_engine": [
+            "网页抓取 API / 爬虫平台（与当前项目定位不符）",
+            "实时搜索替代 / 通用搜索引擎",
+            "浏览器自动化工具",
+            "能绕过登录 / 绕过风控",
+        ],
+        "resource_list": [
+            "可直接运行的平台 / 产品 / 服务",
+            "一键部署 / 生产级基础设施",
+            "有 API / SDK 可供调用",
+        ],
+        "agent_framework": [
+            "保证商业落地 / 保证 ROI",
+            "绕过登录 / 绕过风控 / 万能爬虫",
+            "GEO 排名 / AI 引用保证",
+        ],
+    }
 
-    return unsupported or [
+    unsupported = unsupported_map.get(project_type, [
         "本项目的功能范围以 README 和 Topics 为准，不要引入未提及的技术概念",
-    ]
+    ])
+
+    return unsupported
 
 
 def _derive_risk_boundaries(repo: ScoredRepo) -> list[str]:
-    """Derive risk boundaries based on repo characteristics."""
+    """Derive risk boundaries based on repo characteristics.
+
+    Uses project-type classification from reviewer module to produce
+    type-specific risk boundaries instead of hardcoded per-project rules.
+    """
+    from .reviewer import classify_project_type as _classify_project_type
+    from .reviewer import get_project_boundary
+
     topics = [t.lower() for t in (repo.topics or [])]
     license_name = (repo.license or "").lower()
-
-    boundaries = ["使用前应阅读并遵守目标网站的 robots.txt 和服务条款"]
-
-    if any(k in topics for k in ("scrap", "crawl")):
-        boundaries.extend([
-            "不是万能爬虫，不是绕过工具——需尊重目标网站的访问限制",
-            "大规模抓取可能涉及版权、隐私、数据合规问题",
-            "禁止用于抓取登录/付费墙后内容（除非有合法授权）",
-        ])
-
-    # browser-use specific: browser automation is high-risk
-    is_browser_automation = (
-        "browser" in str(repo.full_name).lower()
-        or any(k in topics for k in ("browser-automation", "browser", "playwright", "selenium"))
+    project_type = _classify_project_type(
+        repo_full_name=repo.full_name,
+        topics=topics,
+        description=repo.description or "",
     )
-    if is_browser_automation:
-        boundaries.extend([
-            "可以用于公开网页检查、授权流程辅助、页面信息整理和人工确认后的重复操作自动化",
-            "不得用于绕过登录、验证码、风控、平台限制、隐私保护或服务条款",
-            "不得用于批量注册、刷量、爬取隐私数据、自动化骚扰",
-            "涉及账号操作、登录页面、平台条款、隐私数据、验证码、风控系统均需人工确认",
-            "不能保证 GEO 排名、AI 引用或询盘增长",
-        ])
 
+    boundary = get_project_boundary(project_type)
+
+    boundaries = []
+
+    # Allowed claims
+    if boundary.allowed_claims:
+        boundaries.append(f"可声明范围：{'、'.join(boundary.allowed_claims[:5])}")
+
+    # Forbidden claims
+    if boundary.forbidden_claims:
+        boundaries.append(f"禁止声明：{'、'.join(boundary.forbidden_claims[:5])}")
+
+    # Expected disclaimers
+    if boundary.expected_disclaimers:
+        boundaries.extend(boundary.expected_disclaimers)
+
+    # License risks
     if "agpl" in license_name or "gpl" in license_name:
         boundaries.append(f"{repo.license} 许可证有 Copyleft 限制，商用需评估")
 
     if not license_name:
         boundaries.append("未明确许可证，商用前需确认版权归属")
+
+    if not boundaries:
+        boundaries.append("使用前应阅读并遵守目标网站的 robots.txt 和服务条款")
 
     return boundaries

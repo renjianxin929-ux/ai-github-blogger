@@ -20,18 +20,323 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-# ── Expressions that indicate content hallucination / wrong-project ──────────
-# If these appear in content for a scraping/crawling tool, it's a red flag.
-WRONG_PROJECT_SIGNALS = [
-    "RAGFlow", "LangChain-ChatChat", "知识库问答", "私有化知识库",
-    "Milvus", "Chroma", "Pinecone", "Qdrant", "Weaviate",
-    "向量数据库", "embedding model", "text2vec",
-    "中文分词", "ChatGLM", "Baichuan", "国内常用开源模型",
-    "文档分割", "文档切分", "知识库管理",
-    "非 AI 工程师也能", "无需编码即可在本地",
-]
+# ═════════════════════════════════════════════════════════════════════════════
+# Project type classification — drives ALL boundary checks dynamically
+# ═════════════════════════════════════════════════════════════════════════════
 
-# ── Expressions that indicate exaggerated / unsafe claims ────────────────────
+
+@dataclass
+class ProjectBoundary:
+    """What a project type CAN claim, MUST NOT claim, and MUST disclaim.
+
+    Replaces all hardcoded GEO / scraping / browser-use boundary rules with
+    a single project-type-driven system.
+    """
+    project_type: str
+    # What this project type is legitimately about
+    allowed_claims: list[str] = field(default_factory=list)
+    # Claims that are NEVER acceptable for this project type
+    forbidden_claims: list[str] = field(default_factory=list)
+    # Phrases that, if present, are auto-fail regardless of context
+    blocking_phrases: list[str] = field(default_factory=list)
+    # Semantic signals that must be expressed somewhere in content
+    required_boundary_signals: list[dict] = field(default_factory=list)
+    # Minimum number of required_boundary_signals that must be present
+    min_boundary_signals_present: int = 0
+    # Risk disclaimers that should appear (warned if absent)
+    expected_disclaimers: list[str] = field(default_factory=list)
+    # Wrong-project signals — key concepts/projects this type is NOT
+    wrong_project_signals: list[str] = field(default_factory=list)
+
+
+def classify_project_type(repo_full_name: str = "", topics: list | None = None,
+                          description: str = "", ctx: dict | None = None) -> str:
+    """Classify a repo into one of the standard project types.
+
+    Used to drive boundary checks, forbidden claims, and platform rules.
+    """
+    ctx = ctx or {}
+    topics = [t.lower() for t in (topics or [])]
+    desc = (description or ctx.get("description", "")).lower()
+    name = repo_full_name.lower()
+    text = f"{name} {desc} {' '.join(topics)}"
+
+    # Check context-provided type first
+    ctx_type = ctx.get("content_type", "")
+    if ctx_type in ("high_risk",):
+        return "high_risk"
+
+    # High-risk detection
+    high_risk_keywords = [
+        "deepfake", "face-swap", "faceswap", "face swap",
+        "phishing", "credential-harvest", "credential harvest",
+        "malware", "spam", "ransomware", "keylogger",
+    ]
+    if any(k in text for k in high_risk_keywords):
+        return "high_risk"
+
+    # Resource list / awesome list
+    if any(k in name or k in topics for k in ("awesome", "awesome-list", "curated-list")):
+        return "resource_list"
+    if "awesome" in name and ("list" in desc or "curated" in desc or "收集" in desc or "资源" in desc):
+        return "resource_list"
+    if ctx_type == "resource_list":
+        return "resource_list"
+
+    # Browser automation
+    browser_signals = ["browser", "playwright", "selenium", "puppeteer", "browser-automation"]
+    if any(k in text for k in browser_signals) and any(k in text for k in ("automation", "agent", "ai")):
+        return "browser_automation"
+
+    # Web scraping API
+    scrap_signals = ["scrap", "crawl", "web-data", "data-extract", "html-to-markdown"]
+    if any(k in topics for k in scrap_signals):
+        return "web_scraping_api"
+    if any(k in desc for k in ("scrap", "crawl", "爬虫", "抓取")) and "browser" not in text:
+        return "web_scraping_api"
+
+    # RAG engine
+    rag_signals = ["rag", "knowledge-base", "knowledge base", "retrieval", "vector-db", "document-qa"]
+    if any(k in topics for k in rag_signals) or any(k in desc for k in ("知识库", "rag", "文档问答", "向量检索")):
+        return "rag_engine"
+
+    # Agent framework
+    agent_signals = ["agent", "multi-agent", "agent-framework", "tool-calling", "function-call"]
+    if any(k in topics for k in agent_signals) or any(k in desc for k in ("agent", "agentic", "multi-agent")):
+        return "agent_framework"
+
+    # MCP / protocol
+    if "mcp" in topics or "mcp" in desc or "model context protocol" in desc:
+        return "agent_framework"
+
+    return "generic"
+
+
+def get_project_boundary(project_type: str, ctx: dict | None = None) -> ProjectBoundary:
+    """Return the boundary rules for a given project type.
+
+    This is THE single source of truth for what every project type
+    can/cannot claim. No other hardcoded per-project-type rules should exist.
+    """
+    ctx = ctx or {}
+
+    # ── Generic exaggerated claims that apply to ALL project types ──
+    _GENERIC_EXAGGERATED = [
+        ("保证排名", "无法保证排名，必须删除或改为'可能有助于'"),
+        ("保证询盘", "无法保证询盘，必须删除或改为'可能增加'"),
+        ("保证 AI 引用", "无法保证，必须删除或改为'可能提升'"),
+        ("绝对可以", "过于绝对，需改为合理推断语气"),
+        ("定价数千至上万美元", "除非有明确依据，否则不得出现"),
+    ]
+
+    # ── Per-type boundaries ──
+    boundaries = {
+        "web_scraping_api": ProjectBoundary(
+            project_type="web_scraping_api",
+            allowed_claims=[
+                "网页抓取/爬取（scrape/crawl）",
+                "HTML → Markdown / 结构化数据转换",
+                "面向 LLM / AI Agent 的数据供给",
+                "API-first 设计，支持多语言 SDK",
+            ],
+            forbidden_claims=[
+                "绕过登录", "绕过风控", "绕过反爬", "绕过限制",
+                "万能爬虫", "所有网站都能抓", "任意网页",
+                "保证 AI 引用", "保证排名", "保证询盘",
+                "GEO 工具", "AI 搜索引擎优化",
+            ],
+            blocking_phrases=[
+                "绕过登录", "绕过风控", "绕过反爬",
+                "保证 AI 引用", "保证排名", "保证询盘",
+                "万能爬虫", "3秒把全网变文档",
+            ],
+            wrong_project_signals=[
+                "RAGFlow", "LangChain", "ChatChat", "知识库问答", "私有化知识库",
+                "Milvus", "Chroma", "Pinecone", "Qdrant", "Weaviate",
+                "向量数据库", "embedding model", "text2vec",
+                "中文分词", "ChatGLM", "Baichuan", "国内开源模型",
+                "文档分割", "文档切分", "知识库管理",
+                "非 AI 工程师也能", "无需编码即可在本地",
+                "LLM 推理", "模型部署", "ChatBot 框架",
+                "LangChain", "LlamaIndex", "AI 编排框架",
+                "知识图谱构建", "实体抽取引擎",
+            ],
+            required_boundary_signals=[
+                {
+                    "name": "不绕过安全措施",
+                    "patterns": [
+                        r"不(?:能|会|可|应|得|应用于|用于).{0,15}(?:绕过|突破|规避).{0,10}(?:登录|风控|反爬|验证码|安全措施)",
+                        r"(?:不能|不得|禁止|严禁).{0,10}(?:绕过|突破|规避).{0,10}(?:登录|风控|反爬)",
+                    ],
+                },
+                {
+                    "name": "不保证所有网站",
+                    "patterns": [
+                        r"不(?:能|会|可|保证|承诺).{0,15}(?:所有|全部|任何|任意).{0,10}(?:网站|网页|页面)",
+                        r"(?:不能|无法)(?:保证|确保).{0,5}(?:所有|全部|任何).{0,5}(?:网站|网页)",
+                    ],
+                },
+            ],
+            min_boundary_signals_present=1,
+            expected_disclaimers=[
+                "robots.txt 合规提醒",
+                "版权风险提醒",
+                "隐私风险提醒",
+            ],
+        ),
+        "browser_automation": ProjectBoundary(
+            project_type="browser_automation",
+            allowed_claims=[
+                "浏览器自动化操作",
+                "Agent 操作网页（Playwright/Selenium）",
+                "公开网页检查、授权流程辅助、页面信息整理",
+                "人工确认后的重复操作自动化",
+            ],
+            forbidden_claims=[
+                "GEO 工具", "AI 搜索排名优化", "保证 AI 引用",
+                "绕过登录", "绕过验证码", "绕过风控",
+                "批量注册", "刷量", "自动化骚扰",
+                "保证排名", "保证询盘",
+            ],
+            blocking_phrases=[
+                "绕过登录", "绕过验证码", "绕过风控",
+                "保证 AI 引用", "保证排名", "保证询盘",
+                "GEO 排名", "AI 搜索优化",
+            ],
+            wrong_project_signals=[
+                "GEO 工具", "AI 搜索排名",
+                "RAGFlow", "知识库", "向量数据库",
+                "爬虫 API", "网页抓取平台",
+            ],
+            required_boundary_signals=[
+                {
+                    "name": "不绕过安全措施",
+                    "patterns": [
+                        r"不(?:能|会|可|应|得|应用于|用于).{0,15}(?:绕过|突破|规避).{0,10}(?:登录|风控|反爬|验证码|平台限制)",
+                        r"(?:不能|不得|禁止|严禁).{0,10}(?:绕过|突破|规避).{0,10}(?:登录|风控|反爬|平台限制)",
+                    ],
+                },
+                {
+                    "name": "不保证排名/询盘",
+                    "patterns": [
+                        r"不(?:能|会|可|保证|承诺).{0,10}(?:提升|提高|影响|保证).{0,10}(?:排名|GEO|AI.{0,5}引用|询盘)",
+                        r"(?:不能|无法).{0,10}(?:保证|确保).{0,5}(?:GEO|排名|AI.{0,5}引用|询盘)",
+                    ],
+                },
+            ],
+            min_boundary_signals_present=1,
+            expected_disclaimers=[
+                "账号操作需人工确认",
+                "服务条款遵守提醒",
+                "隐私保护提醒",
+            ],
+        ),
+        "rag_engine": ProjectBoundary(
+            project_type="rag_engine",
+            allowed_claims=[
+                "知识库 / RAG 平台 / 文档问答",
+                "向量检索 / 语义搜索",
+                "企业文档问答 / 内部知识管理",
+                "LLM + 私有数据的结合",
+            ],
+            forbidden_claims=[
+                "爬虫 API", "网页抓取工具", "实时搜索替代",
+                "绕过登录", "绕过风控", "万能爬虫",
+                "保证 AI 引用", "保证排名",
+            ],
+            blocking_phrases=[
+                "爬虫 API", "万能爬虫", "绕过登录", "绕过风控",
+                "保证 AI 引用", "保证排名", "保证询盘",
+                "实时搜索替代", "替代搜索引擎",
+            ],
+            wrong_project_signals=[
+                "Firecrawl", "网页抓取平台", "爬虫 API",
+                "浏览器自动化", "browser-use",
+                "GEO 排名", "AI 搜索优化",
+            ],
+            required_boundary_signals=[],
+            min_boundary_signals_present=0,
+            expected_disclaimers=[
+                "数据源合规提醒",
+                "模型幻觉提醒",
+            ],
+        ),
+        "resource_list": ProjectBoundary(
+            project_type="resource_list",
+            allowed_claims=[
+                "资源索引 / 项目清单 / 精选列表",
+                "分类整理 / 社区维护",
+            ],
+            forbidden_claims=[
+                "可直接运行的产品", "平台", "一键部署",
+                "生产级", "企业级", "保证性能",
+            ],
+            blocking_phrases=[
+                "可直接运行", "一键部署", "生产级平台",
+                "保证 AI 引用", "保证排名",
+            ],
+            wrong_project_signals=[
+                "可直接运行", "生产级平台", "一键部署",
+                "API 调用", "SDK 接入",
+            ],
+            required_boundary_signals=[],
+            min_boundary_signals_present=0,
+            expected_disclaimers=[],
+        ),
+        "agent_framework": ProjectBoundary(
+            project_type="agent_framework",
+            allowed_claims=[
+                "Agent 架构 / 工具调用 / 工作流编排",
+                "Multi-agent 协作",
+                "LLM 应用开发框架",
+            ],
+            forbidden_claims=[
+                "保证商业落地", "保证 ROI", "保证生产级",
+                "绕过登录", "绕过风控", "万能爬虫",
+            ],
+            blocking_phrases=[
+                "保证商业落地", "保证 ROI", "保证 AI 引用",
+                "绕过登录", "绕过风控",
+            ],
+            required_boundary_signals=[],
+            min_boundary_signals_present=0,
+            expected_disclaimers=[],
+        ),
+        "high_risk": ProjectBoundary(
+            project_type="high_risk",
+            allowed_claims=[],
+            forbidden_claims=["*"],  # everything
+            blocking_phrases=["*"],
+            required_boundary_signals=[],
+            min_boundary_signals_present=0,
+            expected_disclaimers=[],
+        ),
+        "generic": ProjectBoundary(
+            project_type="generic",
+            allowed_claims=[],
+            forbidden_claims=[],
+            blocking_phrases=[
+                "保证 AI 引用", "保证排名", "保证询盘",
+                "绕过登录", "绕过风控", "万能爬虫",
+            ],
+            required_boundary_signals=[],
+            min_boundary_signals_present=0,
+            expected_disclaimers=[],
+        ),
+    }
+
+    boundary = boundaries.get(project_type, boundaries["generic"])
+    # Merge generic exaggerated claims into forbidden_claims
+    for phrase, _explanation in _GENERIC_EXAGGERATED:
+        if phrase not in boundary.blocking_phrases:
+            boundary.blocking_phrases.append(phrase)
+
+    return boundary
+
+
+# ── Expressions that indicate exaggerated / unsafe claims (GENERIC) ──────
+# These apply to ALL project types. Project-type-specific forbidden claims
+# come from get_project_boundary().
 EXAGGERATED_CLAIMS = [
     ("任意网页", "过于绝对，建议改为'大多数公开网页'或'目标网站'"),
     ("任何网站", "过于绝对，建议改为'符合规范的网页'"),
@@ -48,77 +353,6 @@ EXAGGERATED_CLAIMS = [
     ("核心水龙头", "误导性表达，夸大组件地位"),
     ("定价数千至上万美元", "除非有明确依据，否则不得出现"),
     ("3秒把全网变文档", "夸大速度+能力范围，必须删除"),
-]
-
-# ── Hard boundary phrases for GEO content ────────────────────────────────────
-GEO_HARD_BOUNDARY_PHRASES = [
-    "保证提升 AI 引用",
-    "保证排名",
-    "保证询盘",
-    "直接决定 AI 是否引用",
-    "绝对可以",
-    "核心水龙头组件",
-    "定价数千至上万美元",
-]
-
-# ── GEO boundary semantic signals (project-agnostic) ──────────────────────
-# Instead of matching a hardcoded sentence, check for 5 boundary meanings.
-# Each signal has multiple acceptable phrasings.
-_GEO_BOUNDARY_SIGNALS = [
-    # 1. Project is only an auxiliary component in the GEO chain
-    {
-        "name": "组件化定位",
-        "patterns": [
-            r"(?:可以作为|只能作为|定位为|充当|扮演).{0,20}(?:GEO|外贸|搜索引擎).{0,15}(?:组件|环节|辅助|工具之一|一部分)",
-            r"(?:GEO|外贸|搜索引擎).{0,15}(?:链路|工作流|链条|体系).{0,15}(?:组件|环节|辅助|工具之一|一部分)",
-            r"(?:组件|环节|辅助).{0,10}(?:之一|而已|罢了)",
-        ],
-    },
-    # 2. Project itself is NOT GEO
-    {
-        "name": "不等于GEO",
-        "patterns": [
-            r"(?:本身)?(?:不等于|不是|并非|不构成|不意味着.{0,5}就是).{0,10}(?:GEO|AI搜索优化|搜索引擎优化)",
-            r"(?:GEO|AI搜索优化)(?:.{0,5}(?:工具|方案|产品))?",
-            r"(?:不能|不可以|不应).{0,10}(?:直接)?(?:包装|硬蹭|宣传).{0,5}(?:GEO|AI搜索优化)",
-        ],
-    },
-    # 3. Does NOT guarantee AI search citation
-    {
-        "name": "不保证AI引用",
-        "patterns": [
-            r"不(?:能|会|可|保证|承诺).{0,20}(?:AI|人工智能|大模型|搜索引擎).{0,10}(?:引用|提及|收录|抓取)",
-            r"不(?:保证|承诺).{0,10}(?:被.{0,5})?(?:AI|人工智能|大模型).{0,10}(?:引用|提及)",
-            r"(?:不能|无法|难以)(?:保证|确保).{0,5}(?:AI.{0,5})?(?:引用|提及)",
-        ],
-    },
-    # 4. Does NOT guarantee ranking
-    {
-        "name": "不保证排名",
-        "patterns": [
-            r"不(?:能|会|可|保证|承诺).{0,10}(?:提升|提高|改善|影响).{0,10}(?:排名|搜索排名|SEO)",
-            r"不(?:保证|承诺).{0,10}(?:排名|搜索排名|搜索结果)",
-            r"(?:不能|无法|难以)(?:保证|确保).{0,5}(?:排名|搜索排名)",
-            # Broader: "不能保证...排名" / "不能保证...搜索排名" (direct negation, up to 25 chars gap)
-            r"不.{0,5}(?:保证|承诺).{0,25}(?:排名|搜索排名|SEO|搜索结果)",
-            r"(?:不能|无法|难以).{0,20}(?:排名|搜索排名)",
-        ],
-    },
-    # 5. Does NOT guarantee inquiry/lead generation
-    {
-        "name": "不保证询盘",
-        "patterns": [
-            r"不(?:能|会|可|保证|承诺).{0,10}(?:带来|产生|获取|增加).{0,10}(?:询盘|客户|订单|转化|销售线索)",
-            r"不(?:保证|承诺).{0,10}(?:询盘|客户获取|销售线索|业务增长)",
-            r"(?:不能|无法|难以)(?:保证|确保).{0,5}(?:询盘|客户|订单|转化)",
-            r"不.{0,5}(?:直接|必然).{0,5}(?:带来|产生).{0,5}(?:询盘|客户|订单)",
-            # Broader: "不能保证...询盘" / "不能承诺...客户" (direct negation, up to 25 chars gap)
-            r"不.{0,5}(?:保证|承诺).{0,25}(?:询盘|客户获取|销售线索|业务增长)",
-            r"(?:不能|无法|难以).{0,20}(?:询盘|客户|订单)",
-            # Catch "询盘增长" compound: "不能保证...询盘增长"
-            r"不.{0,5}(?:保证|承诺).{0,25}询盘",
-        ],
-    },
 ]
 
 # ── Template / placeholder detection (Publication Readiness Gate) ──────────
@@ -143,19 +377,15 @@ def _check_template_placeholders(content: str) -> list[str]:
     return issues
 
 
-# browser-use specific risk boundary — must appear in content for browser-use
-_BROWSER_USE_RISK_BOUNDARY = (
-    "browser-use 可以用于公开网页检查、授权流程辅助、页面信息整理"
-    "和人工确认后的重复操作自动化，但它不应用于绕过登录、验证码、"
-    "风控、平台限制、隐私保护或服务条款。它也不能保证 GEO 排名、AI 引用或询盘增长。"
-)
+# ── Boundary signal check (project-type-driven, replaces hardcoded GEO checks) ──
 
-
-def _geo_boundary_semantic_check(content: str) -> tuple[bool, list[str]]:
-    """Check that content expresses all 5 GEO boundary meanings, project-agnostically."""
+def _check_boundary_signals(content: str, boundary: ProjectBoundary) -> tuple[bool, list[str]]:
+    """Check that content expresses the required boundary signals for this project type."""
     import re
+    if not boundary.required_boundary_signals:
+        return True, []
     missing = []
-    for signal in _GEO_BOUNDARY_SIGNALS:
+    for signal in boundary.required_boundary_signals:
         found = False
         for pattern in signal["patterns"]:
             if re.search(pattern, content):
@@ -163,7 +393,8 @@ def _geo_boundary_semantic_check(content: str) -> tuple[bool, list[str]]:
                 break
         if not found:
             missing.append(signal["name"])
-    passed = len(missing) == 0
+    passed = len(missing) <= max(0, len(boundary.required_boundary_signals)
+                                  - boundary.min_boundary_signals_present)
     return passed, missing
 
 
@@ -261,19 +492,31 @@ def _is_risk_safe_context(line: str, phrase: str, context_lines: list[str] | Non
 
 def repo_consistency_check(
     content: str, repo_full_name: str, unsupported_features: list[str] | None = None,
+    project_type: str = "generic", ctx: dict | None = None,
 ) -> CheckResult:
     """Check that content is about the correct repo, not hallucinated projects.
 
-    Detects signals from wrong-project concepts (e.g., RAGFlow in a Firecrawl post).
-    Requires 3+ wrong-project signals to fail — single-term matches are common
-    in README excerpts and should not cause false positives.
+    Uses project-type-specific wrong_project_signals from get_project_boundary().
+    Requires 3+ wrong-project signals to fail — tolerates incidental mentions.
     """
     import re
+    ctx = ctx or {}
     issues = []
     must_fix = []
     content_lower = content.lower()
 
-    for signal in WRONG_PROJECT_SIGNALS:
+    # Get project-type-specific wrong-project signals
+    boundary = get_project_boundary(project_type, ctx)
+    signals_to_check = boundary.wrong_project_signals
+
+    # Also extract additional signals from unsupported_features as supplement
+    if unsupported_features:
+        extra_signals = _extract_keywords_from_features(unsupported_features)
+        for sig in extra_signals:
+            if sig not in signals_to_check:
+                signals_to_check.append(sig)
+
+    for signal in signals_to_check:
         sig_lower = signal.lower()
         if sig_lower not in content_lower:
             continue
@@ -303,6 +546,29 @@ def repo_consistency_check(
         must_fix_sentences=must_fix[:5],
         detail=f"检测到 {len(issues)} 个错位信号（阈值={ACTIVE_SIGNAL_THRESHOLD}）" if issues else f"内容聚焦于 {repo_full_name}，未发现错位",
     )
+
+
+def _extract_keywords_from_features(features: list[str]) -> list[str]:
+    """Extract standalone keywords from unsupported feature descriptions.
+
+    Splits long descriptions into individual searchable keywords.
+    e.g. "知识库 / RAG 平台 / 向量数据库（与当前项目定位不符）"
+      → ["知识库", "RAG 平台", "向量数据库"]
+    """
+    import re
+    keywords = []
+    for feature in features:
+        # Remove parenthetical notes
+        cleaned = re.sub(r"[（(][^)）]*[)）]", "", feature).strip()
+        # Split on common delimiters
+        parts = re.split(r"\s*/\s*|\s*[,，]\s*|\s*、\s*", cleaned)
+        for part in parts:
+            part = part.strip()
+            if len(part) >= 2:
+                connector_words = {"与", "及", "或", "不", "需", "应", "可", "用", "以", "在", "和", "符合"}
+                if part not in connector_words:
+                    keywords.append(part)
+    return keywords
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -361,24 +627,48 @@ def claim_grounding_check(
 # Check 3: Risk Boundary
 # ═════════════════════════════════════════════════════════════════════════════
 
-def risk_boundary_check(content: str, geo_boundary: bool = False, strict_mode: bool = True) -> CheckResult:
+def risk_boundary_check(content: str, project_type: str = "generic",
+                        strict_mode: bool = True, ctx: dict | None = None) -> CheckResult:
     """Check for exaggerated claims, bypass hints, and missing safety disclaimers.
 
-    In strict_mode (default), also checks for missing robots.txt/copyright/privacy
-    disclaimers in scraping-related content. In non-strict mode, only checks
-    for explicit exaggerated claims — suitable for short-form scripts.
+    Driven by project_type — boundary rules come from get_project_boundary(),
+    not from hardcoded geo_boundary / scraping / browser-use rules.
+
+    In strict_mode, also checks for required boundary signals and expected disclaimers.
+    In non-strict mode, only checks for explicit blocking phrases — suitable for shorts.
     """
+    ctx = ctx or {}
     issues = []
     must_fix = []
+    boundary = get_project_boundary(project_type, ctx)
 
-    for phrase, explanation in EXAGGERATED_CLAIMS:
+    # ── 1. Check against project-type-specific blocking phrases ──
+    for phrase in boundary.blocking_phrases:
+        if phrase == "*":  # all content blocked for high_risk
+            continue
         if phrase in content:
-            # Check if ALL occurrences are in warning/disclaimer context
             matching_lines = []
             all_lines = content.split("\n")
             for i, line in enumerate(all_lines):
                 if phrase in line:
-                    # Collect adjacent lines for context-aware safe check
+                    adjacent = []
+                    if i > 0:
+                        adjacent.append(all_lines[i - 1])
+                    if i < len(all_lines) - 1:
+                        adjacent.append(all_lines[i + 1])
+                    if not _is_risk_safe_context(line, phrase, adjacent):
+                        matching_lines.append(line.strip()[:150])
+            if matching_lines:
+                issues.append(f"禁止声明（{project_type}）: '{phrase}'")
+                must_fix.extend(matching_lines[:2])
+
+    # ── 2. Check generic exaggerated claims ──
+    for phrase, explanation in EXAGGERATED_CLAIMS:
+        if phrase in content:
+            matching_lines = []
+            all_lines = content.split("\n")
+            for i, line in enumerate(all_lines):
+                if phrase in line:
                     adjacent = []
                     if i > 0:
                         adjacent.append(all_lines[i - 1])
@@ -390,55 +680,35 @@ def risk_boundary_check(content: str, geo_boundary: bool = False, strict_mode: b
                 issues.append(f"夸大/风险表达: '{phrase}' — {explanation}")
                 must_fix.extend(matching_lines[:2])
 
-    # GEO-specific checks
-    if geo_boundary:
-        for phrase in GEO_HARD_BOUNDARY_PHRASES:
-            if phrase in content:
-                issues.append(f"GEO硬承诺: '{phrase}' — 必须删除")
-                for line in content.split("\n"):
-                    if phrase in line:
-                        must_fix.append(line.strip()[:150])
-                        break
+    # ── 3. Check required boundary signals (strict mode only) ──
+    if strict_mode and boundary.required_boundary_signals:
+        signals_ok, signals_missing = _check_boundary_signals(content, boundary)
+        if not signals_ok:
+            missing_names = "、".join(signals_missing)
+            issues.append(f"缺少 {project_type} 边界声明: {missing_names}")
 
-        # Check that boundary statement is present (only in strict mode)
-        if strict_mode:
-            geo_passed, geo_missing = _geo_boundary_semantic_check(content)
-            if not geo_passed:
-                missing_names = "、".join(geo_missing)
-                issues.append(f"缺少 GEO 边界声明: {missing_names}")
-
-    # Check for missing safety disclaimers (only in strict mode for scraping tools)
-    # Skip if geo_boundary=True and the GEO boundary statement is present —
-    # GEO articles cover scope limitations through their boundary statement.
-    if strict_mode and not (geo_boundary and _geo_boundary_semantic_check(content)[0]):
-        scraping_content = any(k in content for k in ("爬虫", "抓取", "scrap", "crawl"))
-        if scraping_content:
-            found_any = False
-            missing = []
-            if "robots.txt" in content:
-                found_any = True
+    # ── 4. Check expected disclaimers (strict mode only) ──
+    if strict_mode and boundary.expected_disclaimers:
+        found_count = 0
+        missing = []
+        for disclaimer in boundary.expected_disclaimers:
+            # Check via simplified keyword match
+            kw = disclaimer.replace("提醒", "").replace("遵守", "")
+            if any(k in content for k in (kw, disclaimer[:4])):
+                found_count += 1
             else:
-                missing.append("robots.txt 合规提醒")
-            if "版权" in content or "copyright" in content.lower():
-                found_any = True
-            else:
-                missing.append("版权风险提醒")
-            if "隐私" in content or "privacy" in content.lower():
-                found_any = True
-            else:
-                missing.append("隐私风险提醒")
-            # Require at least one disclaimer, warn about missing others
-            if not found_any:
-                issues.append(f"缺少任何关键风险提醒: {', '.join(missing)}")
+                missing.append(disclaimer)
+        if found_count == 0 and len(missing) >= len(boundary.expected_disclaimers):
+            issues.append(f"缺少所有关键风险提醒: {', '.join(missing[:3])}")
 
-    # Count GEO hard-promise issues separately (zero tolerance)
-    geo_hard_issues = sum(1 for i in issues if "GEO" in i)
-    # Missing ALL disclaimers is always blocking
-    missing_all_disclaimers = any("缺少任何关键风险提醒" in i for i in issues)
-    general_issues = len(issues) - geo_hard_issues
-
+    # ── Scoring ──
     score = max(0, 100 - len(issues) * 30)
-    passed = geo_hard_issues == 0 and not missing_all_disclaimers and general_issues <= 1
+    has_blocking = any(
+        any(bp in content for bp in boundary.blocking_phrases if bp != "*")
+        for _ in [1]  # run once
+    )
+    missing_all_disclaimers = any("缺少所有关键风险提醒" in i for i in issues)
+    passed = not has_blocking and not missing_all_disclaimers and len(issues) <= 1
 
     return CheckResult(
         check_name="risk_boundary",
@@ -466,7 +736,7 @@ PLATFORM_STYLE_RULES = {
         "tone": "专业但不枯燥，有个人成长主线",
     },
     "geo_angle": {
-        "must_have": ["边界声明", "组件化定位"],
+        "must_have": [],
         "must_not": ["绝对"],
         "tone": "理性分析，不画饼",
     },
@@ -535,6 +805,14 @@ def quality_review(
     confirmed = ctx.get("confirmed_features", [])
     unsupported = ctx.get("unsupported_features", [])
 
+    # Determine project type once — drives ALL boundary checks
+    project_type = classify_project_type(
+        repo_full_name=repo_full_name,
+        topics=ctx.get("topics", "").split(", ") if isinstance(ctx.get("topics"), str) else ctx.get("topics", []),
+        description=ctx.get("description", ""),
+        ctx=ctx,
+    )
+
     review_files = [
         "01_ai_fde_deep_analysis.md",
         "02_xiaohongshu.md",
@@ -584,7 +862,8 @@ def quality_review(
                 blocking_issues.append(f"{fname}: {issue}")
 
         # Check 1: Repo consistency (core)
-        c1 = repo_consistency_check(content, repo_full_name, unsupported)
+        c1 = repo_consistency_check(content, repo_full_name, unsupported,
+                                     project_type=project_type, ctx=ctx)
         fr.checks.append(c1)
         if not c1.passed:
             fr.needs_regeneration = True
@@ -597,10 +876,9 @@ def quality_review(
         if c2.must_fix_sentences:
             all_deleted.setdefault(fname, []).extend(c2.must_fix_sentences)
 
-        # Check 3: Risk boundary (core)
-        is_geo = "geo" in fname
+        # Check 3: Risk boundary (core) — driven by project type, not file name
         is_light = fname in ("03_douyin_video.md", "04_videohao_script.md")
-        c3 = risk_boundary_check(content, geo_boundary=is_geo, strict_mode=not is_light)
+        c3 = risk_boundary_check(content, project_type=project_type, strict_mode=not is_light, ctx=ctx)
         fr.checks.append(c3)
         if not c3.passed:
             fr.needs_regeneration = True
@@ -673,7 +951,7 @@ class ReviewerOutcome:
 
 def run_reviewer_pipeline(
     file_name: str, content: str, repo_full_name: str,
-    ctx: dict | None = None, geo_boundary: bool = False,
+    ctx: dict | None = None, project_type: str = "generic",
     strict_mode: bool = True,
 ) -> ReviewerOutcome:
     """Run the reviewer pipeline on one generated file.
@@ -683,20 +961,32 @@ def run_reviewer_pipeline(
 
     In strict_mode=False, only checks explicit exaggerated claims
     (no disclaimer requirements) — suitable for short-form scripts.
+
+    project_type drives boundary checks — no more geo_boundary boolean.
     """
     ctx = ctx or {}
     confirmed = ctx.get("confirmed_features", [])
     unsupported = ctx.get("unsupported_features", [])
 
+    # Determine project type if not explicitly provided
+    if project_type == "generic" and ctx:
+        project_type = classify_project_type(
+            repo_full_name=repo_full_name,
+            topics=ctx.get("topics", "").split(", ") if isinstance(ctx.get("topics"), str) else ctx.get("topics", []),
+            description=ctx.get("description", ""),
+            ctx=ctx,
+        )
+
     core_failures = []
 
     # Core check 1: Repo consistency (always strict)
-    c1 = repo_consistency_check(content, repo_full_name, unsupported)
+    c1 = repo_consistency_check(content, repo_full_name, unsupported,
+                                 project_type=project_type, ctx=ctx)
     if not c1.passed:
         core_failures.append(f"repo_consistency: {c1.detail}")
 
-    # Core check 2: Risk boundary (strictness varies)
-    c3 = risk_boundary_check(content, geo_boundary=geo_boundary, strict_mode=strict_mode)
+    # Core check 2: Risk boundary (strictness varies, driven by project_type)
+    c3 = risk_boundary_check(content, project_type=project_type, strict_mode=strict_mode, ctx=ctx)
     if not c3.passed:
         core_failures.append(f"risk_boundary: {c3.detail}")
 
