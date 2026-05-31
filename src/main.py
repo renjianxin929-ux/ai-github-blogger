@@ -942,6 +942,9 @@ def cmd_content(repo_full_name: str) -> int:
 
     if status == "failed":
         return 1
+    elif status == "blocked":
+        print("\n⛔ BLOCKED: 高风险项目，已拒绝生成内容。")
+        return 4  # blocked — distinct exit code
     elif status == "degraded":
         return 2  # conditional pass
     return 0

@@ -764,16 +764,9 @@ def _gen_09_risk_review(ctx: dict) -> str:
 """
 
 
-def _gen_10_quality_check(ctx: dict) -> str:
-    """Generate quality check report.
-
-    v4: In no-LLM fallback mode, content_quality_score is "未评估" — not a numeric score.
-    Only LLM-generated content gets a real quality score.
-    """
-    llm_available = _has_llm()
-
-    if not llm_available:
-        return f"""# {ctx['name']} — 内容质量检查
+def _no_llm_quality_check(ctx: dict) -> str:
+    """No-LLM fallback quality check — always shows '未评估' regardless of LLM availability."""
+    return f"""# {ctx['name']} — 内容质量检查
 
 > 模式：No-LLM fallback — 内容质量评分仅在 LLM 完整生成后启用
 
@@ -799,6 +792,23 @@ def _gen_10_quality_check(ctx: dict) -> str:
 *生成时间：{ctx['now']}*
 *模式：No-LLM fallback — content_quality_score = not_evaluated*
 """
+
+
+def _gen_10_quality_check(ctx: dict) -> str:
+    """Generate quality check report.
+
+    v4: In no-LLM fallback mode, content_quality_score is "未评估" — not a numeric score.
+    Only LLM-generated content gets a real quality score.
+    """
+    # Respect explicit no_llm override from context (for testing / quality-gate)
+    # before falling back to actual LLM availability check.
+    if ctx.get("no_llm"):
+        return _no_llm_quality_check(ctx)
+
+    llm_available = _has_llm()
+
+    if not llm_available:
+        return _no_llm_quality_check(ctx)
 
     # LLM mode — would produce real scores
     return f"""# {ctx['name']} — 内容质量检查
@@ -948,6 +958,27 @@ def generate_content_pack(
     is_risk, risk_hits = check_high_risk(scored)
     scored.risk_level = "high" if is_risk else "none"
     _, scored.ai_evidence = check_ai_eligibility(scored)
+
+    # 2.5. Risk gate — refuse to generate content for blocked/high-risk repos
+    if is_risk or scored.risk_level == "high":
+        slug = slugify_repo_name(repo_full_name)
+        pack_dir = output_dir / slug
+        logger.warning(
+            "BLOCKED %s: high-risk project (%s)",
+            repo_full_name, ", ".join(risk_hits[:3]),
+        )
+        # Write a minimal rejection notice instead of full content pack
+        pack_dir.mkdir(parents=True, exist_ok=True)
+        rejection_path = pack_dir / "00_REJECTED.md"
+        rejection_path.write_text(
+            f"# ⛔ 内容生成已拒绝\n\n"
+            f"**项目**：{repo_full_name}\n"
+            f"**原因**：高风险项目 — {', '.join(risk_hits[:5])}\n"
+            f"**风险等级**：high / blocked\n\n"
+            f"根据系统安全策略，不对高风险项目（deepfake/phishing/malware等）生成发布内容。\n",
+            encoding="utf-8",
+        )
+        return pack_dir, "blocked"
 
     # 3. Build context
     ctx = _build_repo_context(scored)

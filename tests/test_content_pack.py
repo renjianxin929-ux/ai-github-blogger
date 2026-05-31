@@ -192,6 +192,120 @@ class TestGenerateContentPackV2:
         assert "未评估" in qc, f"Quality check should show '未评估' in no-LLM mode, got:\n{qc[:500]}"
         assert "not_evaluated" in qc.lower()
 
+
+class TestNegativeControlRiskGate:
+    """Phase 11.8: Negative control — content pipeline must refuse high-risk repos."""
+
+    @mock.patch("src.content_pack.mark_as_generated")
+    @mock.patch("src.content_pack.score_repo")
+    @mock.patch("src.content_pack.enrich_repo")
+    def test_high_risk_deepfake_is_blocked(self, mock_enrich, mock_score, mock_mark, tmp_path):
+        """Deepfake/face-swap project must be blocked from content generation."""
+        from src.content_pack import generate_content_pack
+        from src.scorer import ScoredRepo
+
+        mock_enrich.return_value = _make_enriched_repo("hacksider/Deep-Live-Cam")
+        scored = ScoredRepo(
+            full_name="hacksider/Deep-Live-Cam",
+            name="Deep-Live-Cam",
+            description="Real-time face swapping and deepfake tool",
+            url="https://github.com/hacksider/Deep-Live-Cam",
+            language="Python",
+            stars=35000,
+            forks=5000,
+            updated_at="2026-05-28T00:00:00Z",
+            topics=["deepfake", "face-swap", "ai"],
+            license="GPL-3.0",
+            readme="Deep-Live-Cam is a real-time face swap tool using deep learning.",
+            contributors_count=20,
+            score=36.0,
+            subscores={"ai_relevance": 2.5, "recency": 3.0},
+            risk_level="high",
+            content_type="high_risk",
+        )
+        mock_score.return_value = scored
+
+        pack_dir, status = generate_content_pack("hacksider/Deep-Live-Cam", output_dir=tmp_path)
+
+        assert status == "blocked", f"Expected 'blocked', got '{status}'"
+        rejection = pack_dir / "00_REJECTED.md"
+        assert rejection.exists(), "Should write rejection notice for blocked repos"
+        content = rejection.read_text(encoding="utf-8")
+        assert "内容生成已拒绝" in content
+        assert "高风险" in content
+
+    @mock.patch("src.content_pack.mark_as_generated")
+    @mock.patch("src.content_pack.score_repo")
+    @mock.patch("src.content_pack.enrich_repo")
+    def test_scraping_abuse_tool_is_blocked(self, mock_enrich, mock_score, mock_mark, tmp_path):
+        """Phishing/scraping-abuse tool must be blocked."""
+        from src.content_pack import generate_content_pack
+        from src.scorer import ScoredRepo
+
+        mock_enrich.return_value = _make_enriched_repo("evil/scraper-tool")
+        scored = ScoredRepo(
+            full_name="evil/scraper-tool",
+            name="scraper-tool",
+            description="Advanced credential scraping and phishing toolkit",
+            url="https://github.com/evil/scraper-tool",
+            language="Python",
+            stars=5000,
+            forks=1000,
+            updated_at="2026-05-28T00:00:00Z",
+            topics=["phishing", "credential-harvesting", "scraping"],
+            license="MIT",
+            readme="Automated credential harvesting from login pages.",
+            contributors_count=5,
+            score=25.0,
+            subscores={},
+            risk_level="high",
+            content_type="high_risk",
+        )
+        mock_score.return_value = scored
+
+        pack_dir, status = generate_content_pack("evil/scraper-tool", output_dir=tmp_path)
+
+        assert status == "blocked", f"Expected 'blocked', got '{status}'"
+        rejection = pack_dir / "00_REJECTED.md"
+        assert rejection.exists()
+        content = rejection.read_text(encoding="utf-8")
+        assert "phishing" in content.lower() or "高风险" in content
+
+    @mock.patch("src.content_pack.mark_as_generated")
+    @mock.patch("src.content_pack.score_repo")
+    @mock.patch("src.content_pack.enrich_repo")
+    def test_low_risk_repo_still_generates(self, mock_enrich, mock_score, mock_mark, tmp_path):
+        """Normal low-risk repos should NOT be blocked — risk gate is not a blanket ban."""
+        from src.content_pack import generate_content_pack
+        from src.scorer import ScoredRepo
+
+        mock_enrich.return_value = _make_enriched_repo("good/normal-repo")
+        scored = ScoredRepo(
+            full_name="good/normal-repo",
+            name="normal-repo",
+            description="A helpful AI tool for developers",
+            url="https://github.com/good/normal-repo",
+            language="Python",
+            stars=10000,
+            forks=1000,
+            updated_at="2026-05-28T00:00:00Z",
+            topics=["AI", "LLM", "tooling"],
+            license="MIT",
+            readme="# Normal Repo\n\nA safe AI tool.\n" * 20,
+            contributors_count=10,
+            score=75.0,
+            subscores={"ai_relevance": 8.0, "recency": 7.0},
+            risk_level="none",
+            content_type="runnable_project",
+        )
+        mock_score.return_value = scored
+
+        with mock.patch("src.content_pack._has_llm", return_value=False):
+            pack_dir, status = generate_content_pack("good/normal-repo", output_dir=tmp_path)
+
+        assert status in ("ok", "degraded"), f"Expected ok/degraded, got '{status}'"
+        assert not (pack_dir / "00_REJECTED.md").exists(), "Normal repo must not be rejected"
+
     @mock.patch("src.content_pack.mark_as_generated")
     @mock.patch("src.content_pack.score_repo")
     @mock.patch("src.content_pack.enrich_repo")
