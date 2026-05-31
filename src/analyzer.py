@@ -273,7 +273,7 @@ def _derive_unsupported_features(repo: ScoredRepo) -> list[str]:
     # If it's a scraping/crawling tool, it is NOT a knowledge base / RAG platform
     if any(k in topics for k in ("scrap", "crawl", "web-data")):
         unsupported.extend([
-            "知识库 / RAG 平台 / 向量数据库（不是 Milvus、Chroma、Pinecone）",
+            "知识库 / RAG 平台 / 向量数据库（与当前项目定位不符）",
             "LLM 推理 / 模型部署 / ChatBot 框架",
             "中文分词 / 中文语义理解专用工具",
             "LangChain / LlamaIndex 等 AI 编排框架",

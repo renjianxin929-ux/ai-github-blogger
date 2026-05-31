@@ -36,7 +36,7 @@
 
 | 文件 | Repo一致性 | 事实准确性 | 夸大风险 | AI-FDE主线 | 平台适配 | 总分 | 是否需重写 |
 
-- **Repo一致性（0-10）**：是否围绕 $full_name 写作，有无错位内容（如 RAGFlow、Milvus、Chroma 等）
+- **Repo一致性（0-10）**：是否围绕 $full_name 写作，有无错位内容（按项目实际 Topics 和功能范围判断）
   - 如果出现明显错位内容 → 0 分，直接判 fail
 - **事实准确性（0-10）**：功能描述是否以 README/Topics 为准
 - **夸大风险（0-10）**：有无万能化、绕过反爬、保证排名等夸张表达
@@ -48,11 +48,8 @@
 
 - 是否围绕 $full_name 写作
 - 如果出现以下信号，必须判 fail：
-  - RAGFlow / LangChain / 知识库平台
-  - Milvus / Chroma / 向量数据库
-  - ChatGLM / Baichuan / 国内开源模型
-  - 非 AI 工程师一键构建 / 低代码知识库
   - 任何不属于 $full_name 的核心技术概念
+  - $unsupported_features
 - 如果判 fail，必须说明哪些句子有问题
 
 ### 4. 事实与断言分级

@@ -524,6 +524,7 @@ class PackQualityReport:
     recommended_platform: str = ""
     file_reviews: dict[str, FileReview] = field(default_factory=dict)
     deleted_sentences: dict[str, list[str]] = field(default_factory=dict)
+    unsupported_features: list[str] = field(default_factory=list)
 
 
 def quality_review(
@@ -652,6 +653,7 @@ def quality_review(
         recommended_platform=best_platform,
         file_reviews=file_reviews,
         deleted_sentences=all_deleted,
+        unsupported_features=unsupported,
     )
 
 
@@ -785,13 +787,22 @@ def write_quality_report(pack_dir: Path, report: PackQualityReport) -> Path:
             icon = "✅" if c1.passed else "🔴"
             lines.append(f"- {icon} {fname}: {c1.detail}")
 
+    # Project-specific wrong-signal examples derived from context
+    unsupported = report.unsupported_features
+    if unsupported:
+        lines.extend([
+            "",
+            "如果出现以下错位内容，必须判 fail：",
+        ])
+        for item in unsupported[:6]:
+            lines.append(f"- {item}")
+    else:
+        lines.extend([
+            "",
+            "基于项目定位，未发现典型错位模式 — 以 README/Topics 为准。",
+        ])
+
     lines.extend([
-        "",
-        "如果出现以下错位内容，必须判 fail：",
-        "- RAGFlow / LangChain-ChatChat / 知识库平台",
-        "- Milvus / Chroma / Pinecone / 向量数据库",
-        "- ChatGLM / Baichuan / 国内开源模型",
-        "- 文档分割 / 嵌入模型 / 非AI工程师一键构建",
         "",
         "---",
         "",

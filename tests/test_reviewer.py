@@ -308,3 +308,113 @@ class TestPublicationReadinessGate:
             # With all clean files, should be yes (or revise_first if minor issues)
             assert report.publish_recommendation in ("yes", "revise_first")
             assert len(report.blocking_issues) == 0
+
+
+class TestQualityReportNoStaleExamples:
+    """Phase 11.7: Quality check report must not contain hardcoded project examples."""
+
+    STALE_NAMES = [
+        "RAGFlow", "LangChain-ChatChat", "Milvus", "Chroma", "Pinecone",
+        "ChatGLM", "Baichuan", "Qdrant", "Weaviate",
+    ]
+
+    def test_write_quality_report_no_stale_examples(self):
+        """write_quality_report output must not contain stale project names."""
+        import tempfile
+        from pathlib import Path
+        from src.reviewer import (
+            PackQualityReport, FileReview, CheckResult, write_quality_report,
+        )
+
+        report = PackQualityReport(
+            repo_full_name="test-org/test-project",
+            publish_recommendation="yes",
+            overall_score=95,
+            blocking_issues=[],
+            recommended_platform="公众号",
+            file_reviews={
+                "01_ai_fde_deep_analysis.md": FileReview(
+                    file_name="01_ai_fde_deep_analysis.md",
+                    overall_score=95,
+                    checks=[CheckResult(
+                        check_name="repo_consistency", passed=True, score=95,
+                        issues=[], detail="检测到 0 个错位信号（阈值=3）",
+                    )],
+                ),
+            },
+            deleted_sentences={},
+            unsupported_features=["知识库/RAG平台（与当前项目定位不符）", "LLM推理/模型部署"],
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pack_dir = Path(tmpdir)
+            out_path = write_quality_report(pack_dir, report)
+            content = out_path.read_text(encoding="utf-8")
+
+            for name in self.STALE_NAMES:
+                assert name not in content, (
+                    f"Stale project name '{name}' found in quality report:\n{content}"
+                )
+
+    def test_quality_report_uses_project_specific_signals(self):
+        """Quality report should contain project-specific unsupported_features not stale names."""
+        import tempfile
+        from pathlib import Path
+        from src.reviewer import (
+            PackQualityReport, FileReview, CheckResult, write_quality_report,
+        )
+
+        report = PackQualityReport(
+            repo_full_name="mcp-org/awesome-list",
+            publish_recommendation="yes",
+            overall_score=90,
+            blocking_issues=[],
+            file_reviews={},
+            deleted_sentences={},
+            unsupported_features=[
+                "网页抓取/爬虫工具（与当前MCP索引项目定位不符）",
+                "浏览器自动化引擎",
+            ],
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pack_dir = Path(tmpdir)
+            out_path = write_quality_report(pack_dir, report)
+            content = out_path.read_text(encoding="utf-8")
+
+            # Must NOT contain stale project names
+            for name in self.STALE_NAMES:
+                assert name not in content, (
+                    f"Stale project name '{name}' found in quality report"
+                )
+
+            # Must contain the project-specific signals
+            assert "MCP" in content or "mcp" in content.lower()
+
+    def test_empty_unsupported_features_no_stale_fallback(self):
+        """When unsupported_features is empty, must not fall back to stale names."""
+        import tempfile
+        from pathlib import Path
+        from src.reviewer import (
+            PackQualityReport, write_quality_report,
+        )
+
+        report = PackQualityReport(
+            repo_full_name="some-org/some-repo",
+            publish_recommendation="yes",
+            overall_score=90,
+            blocking_issues=[],
+            file_reviews={},
+            deleted_sentences={},
+            unsupported_features=[],  # Empty!
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pack_dir = Path(tmpdir)
+            out_path = write_quality_report(pack_dir, report)
+            content = out_path.read_text(encoding="utf-8")
+
+            for name in self.STALE_NAMES:
+                assert name not in content, (
+                    f"Stale project name '{name}' leaked into report with empty unsupported_features"
+                )
