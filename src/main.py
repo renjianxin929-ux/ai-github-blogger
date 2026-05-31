@@ -11,6 +11,8 @@ Usage:
     python -m src.main dry-run        # End-to-end verification without LLM
     python -m src.main benchmark      # Run scoring benchmark
     python -m src.main quality-gate   # Run quality gate evaluation
+    python -m src.main publish-pack   # Build publish handoff pack
+    python -m src.main publish-pack <owner/repo>  # Publish pack for specific repo
 """
 import json
 import sys
@@ -30,6 +32,7 @@ from pathlib import Path
 from . import config
 from .analyzer import FDEAnalysis, ai_fde_analyze
 from .benchmark import cmd_benchmark
+from .publish_pack import build_publish_pack
 from .quality_gate import cmd_quality_gate
 from .config import (
     MAX_REPOS_TO_ANALYZE,
@@ -91,6 +94,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     # llm-doctor (Phase 15)
     subparsers.add_parser("llm-doctor", help="Diagnose LLM provider connectivity")
+
+    # publish-pack (Phase 17)
+    publish_parser = subparsers.add_parser("publish-pack", help="Build publish handoff pack for manual publishing")
+    publish_parser.add_argument("repo", nargs="?", default=None,
+                                help="Repository full name (owner/repo). If omitted, auto-detects best candidate.")
 
     # Default to "daily" if no subcommand specified
     parser.set_defaults(command="daily", no_llm=False)
@@ -1123,6 +1131,99 @@ def cmd_review_queue() -> int:
         print(f"  Run 'python run.py daily --no-llm' to generate today's report.")
         print()
 
+    # Phase 17: publish-pack hint
+    print("── 发布交付 ──")
+    print()
+    print("  如果 A 区有推荐项目，可以生成发布包：")
+    print("    python run.py publish-pack           # 自动选择最佳候选")
+    print("    python run.py publish-pack owner/repo # 指定项目")
+    print()
+    print("  发布包会生成到 data/publish_packs/ ，包含：")
+    print("    - 公众号/小红书/视频脚本 ready 文件")
+    print("    - 人工审稿清单")
+    print("    - 下一步动作指南")
+    print("    - 不自动发布到任何平台，需人工审核后手动发布")
+    print()
+
+    return 0
+
+
+def cmd_publish_pack(repo_full_name: str | None = None) -> int:
+    """Phase 17: Build a publish handoff pack for manual publishing.
+
+    Generates a local directory with human-ready copy files for WeChat/XHS/TikTok/Video号.
+    No platform API calls, no credentials, no auto-publishing.
+
+    Returns:
+        0 on success, 1 on no_candidate, 2 on error.
+    """
+    print()
+    print("=" * 64)
+    print("  Publish Pack Builder (Phase 17)")
+    print("=" * 64)
+    print()
+
+    if repo_full_name:
+        print(f"  指定项目: {repo_full_name}")
+    else:
+        print("  自动检测最佳发布候选...")
+
+    result = build_publish_pack(repo_full_name)
+
+    if result["status"] == "no_candidate":
+        print()
+        print("  ⚠ 今日无合格发布候选")
+        for w in result.get("warnings", []):
+            print(f"    {w}")
+        print()
+        print("  建议：")
+        print("    1. python run.py daily-workflow  # 重新运行日更流程")
+        print("    2. python run.py review-queue     # 查看审核队列")
+        print("    3. 等待下一轮抓取")
+        print()
+        return 1
+
+    pack_dir = result["pack_dir"]
+    manifest = result.get("manifest", {})
+    files = result.get("files", [])
+    warnings = result.get("warnings", [])
+
+    print(f"  项目: {result['repo']}")
+    print(f"  内容模式: {manifest.get('source_mode', 'unknown')}")
+    print(f"  质量评分: {manifest.get('quality_score', 'N/A')}/100")
+    print(f"  可发布: {'是' if manifest.get('publishable') else '否（需人工审核）'}")
+    print(f"  适合平台: {', '.join(manifest.get('suitable_platforms', [])) or '待确认'}")
+    print()
+
+    if warnings:
+        print("  ⚠ 风险提示：")
+        for w in warnings:
+            print(f"    - {w}")
+        print()
+
+    print(f"  发布包目录: {pack_dir}")
+    print()
+    print("  生成文件：")
+    for f in files:
+        fpath = Path(pack_dir) / f
+        size = fpath.stat().st_size if fpath.exists() else 0
+        print(f"    {f} ({size} bytes)")
+    print()
+
+    manual_review = manifest.get("manual_review_required", True)
+    if manual_review:
+        print("  ⚠ 此发布包需要人工审核后才能发布。")
+        print(f"    1. 阅读 {pack_dir}/README.md 了解发布包概况")
+        print(f"    2. 逐项完成 {pack_dir}/04_review_checklist.md 审稿清单")
+        print(f"    3. 修改各平台 ready 文件中的内容")
+        print(f"    4. 确认无误后，手动复制到各平台发布")
+    else:
+        print("  ✅ 内容可直接发布，建议通读后复制到各平台。")
+
+    print()
+    print("  ⚠ 发布包不会自动发布到任何平台。所有发布操作需人工执行。")
+    print()
+    print("=" * 64)
     return 0
 
 
@@ -1377,6 +1478,8 @@ def main() -> int:
         return cmd_review_queue()
     elif args.command == "llm-doctor":
         return cmd_llm_doctor()
+    elif args.command == "publish-pack":
+        return cmd_publish_pack(args.repo)
     elif args.command == "content":
         if not args.repo:
             parser.error("content command requires a repo argument (owner/repo)")

@@ -198,6 +198,7 @@ REPORTS_DIR = DATA_DIR / "reports"
 CACHE_DIR = DATA_DIR / "cache"
 STATE_DIR = DATA_DIR / "state"
 CONTENT_PACKS_DIR = DATA_DIR / "content_packs"
+PUBLISH_PACKS_DIR = DATA_DIR / "publish_packs"
 TEMPLATES_DIR = _project_root / "templates"
 
 SEEN_REPOS_FILE = STATE_DIR / "seen_repos.json"
