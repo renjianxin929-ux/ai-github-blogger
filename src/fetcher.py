@@ -9,6 +9,7 @@ import feedparser
 import requests
 
 from .config import GITHUB_API_BASE, GITHUB_TOKEN, HTTP_TIMEOUT, SEARCH_KEYWORDS
+from .error_handler import github_request
 
 logger = logging.getLogger(__name__)
 
@@ -126,8 +127,11 @@ def search_repos(keywords: Optional[list[str]] = None) -> list[RawRepo]:
     for keyword in keywords:
         try:
             url = _build_search_url(keyword)
-            resp = requests.get(url, headers=headers, timeout=HTTP_TIMEOUT)
-            resp.raise_for_status()
+            resp = github_request(url, headers=headers, timeout=HTTP_TIMEOUT,
+                                  operation="search", repo_name=f"keyword:{keyword}")
+            if resp is None:
+                logger.warning("Search retry_failed for '%s' — skipped", keyword)
+                continue
             data = resp.json()
             repos = _parse_search_response(data)
 
@@ -139,7 +143,7 @@ def search_repos(keywords: Optional[list[str]] = None) -> list[RawRepo]:
             logger.info("Keyword '%s': %d repos (total unique: %d)", keyword, len(repos), len(all_repos))
             time.sleep(0.1)  # Be gentle with the API
         except Exception as e:
-            logger.warning("Search failed for '%s': %s", keyword, e)
+            logger.warning("Search failed for '%s': %s — skipped", keyword, e)
             time.sleep(1)
 
     return all_repos

@@ -993,14 +993,18 @@ def cmd_daily_workflow() -> int:
         print("     请用简报中的素材在 30 分钟内人工补写。")
     print()
 
-    # ── Section 2: 最推荐的项目及理由 ──
-    print("── 最推荐的项目及理由 ──")
+    # ── Section 2: 推荐分级 (A/B/C/D) ──
+    QUALIFIED = 75
+    CANDIDATE = 60
+
+    best = top5[0] if top5 else None
+    best_score = best.get("score", 0) if best else 0
+
+    print("── A. 今日最推荐 ──")
     print()
-    if top5:
-        best = top5[0]
+    if best and best_score >= QUALIFIED:
         name = best.get("full_name", best.get("name", "unknown"))
         stars = best.get("stars", 0)
-        score = best.get("score", 0)
         pub_score = best.get("publishability_score", 0)
         desc = best.get("description", "")[:120]
         content_type = best.get("content_type", "unclear")
@@ -1015,7 +1019,7 @@ def cmd_daily_workflow() -> int:
         if desc:
             reason_parts.append(f"一句话: {desc}")
         if not reason_parts:
-            reason_parts.append(f"综合评分最高({score:.0f}/100)")
+            reason_parts.append(f"综合评分最高({best_score:.0f}/100)")
 
         print(f"  项目: {name}")
         print(f"  推荐理由: {'; '.join(reason_parts)}")
@@ -1027,17 +1031,39 @@ def cmd_daily_workflow() -> int:
             print(f"  操作: python run.py content {name}  # 将进入 structured_fallback 模式")
         else:
             print(f"  注意: 可发布性不足({pub_score:.0f})，建议人工审核后再生成")
-
-        # Show remaining top5 with brief scores
-        if len(top5) > 1:
-            print()
-            print("  其他候选:")
-            for r in top5[1:5]:
-                rname = r.get("full_name", r.get("name", "unknown"))
-                rscore = r.get("publishability_score", r.get("score", 0))
-                print(f"    - {rname} (可发布性: {rscore:.0f})")
     else:
-        print("  今日无高置信度选题。建议扩大搜索范围或检查 GitHub API 状态。")
+        print("  今日无强推荐项目。")
+        if best:
+            print(f"  当前最高分 {best.get('full_name', '?')} 仅 {best_score:.0f}/100，未达到推荐阈值（≥{QUALIFIED}）。")
+        else:
+            print("  今日无高置信度 Top 5 选题。")
+
+    # ── B. 可观察候选 ──
+    print()
+    print(f"── B. 可观察候选 ({CANDIDATE}-{QUALIFIED-1}分) ──")
+    print()
+    candidates = [r for r in top5 if CANDIDATE <= r.get("score", 0) < QUALIFIED] if top5 else []
+    if candidates:
+        for r in candidates[:5]:
+            rname = r.get("full_name", r.get("name", "unknown"))
+            rscore = r.get("score", 0)
+            rstars = r.get("stars", 0)
+            print(f"  - {rname} ({rscore:.0f}分, {rstars} stars)")
+    else:
+        print("  今日无此分段候选。")
+
+    # ── C. 需要人工审核 ──
+    print()
+    print(f"── C. 需要人工审核 (<{CANDIDATE}分) ──")
+    print()
+    review_list = [r for r in top5 if r.get("score", 0) < CANDIDATE] if top5 else []
+    if review_list:
+        for r in review_list[:5]:
+            rname = r.get("full_name", r.get("name", "unknown"))
+            rscore = r.get("score", 0)
+            print(f"  - {rname} ({rscore:.0f}分) — 需人工审核后决定")
+    else:
+        print("  今日无此分段候选。")
     print()
 
     # ── Section 3: 下一步命令 ──

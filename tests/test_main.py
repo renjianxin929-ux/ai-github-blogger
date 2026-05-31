@@ -495,3 +495,89 @@ class TestReviewQueue:
         assert "content" in result.lower() or "生成" in result or "发布" in result or \
             "python run.py content" in result, \
             f"Should indicate content generation readiness, got:\n{result[:500]}"
+
+
+class TestReviewQueueTieredRecommendation:
+    """Phase 16.1: A/B/C/D 四级分层 — 低分项目不能进入最推荐."""
+
+    QUALIFIED = 75
+    CANDIDATE = 60
+
+    def test_high_score_project_is_recommended(self):
+        """score >= 75: 进入 A. 今日最推荐, 不出现'今日无强推荐'."""
+        from src.report import generate_review_queue
+
+        repo = _make_scored_repo("test/great-repo", score=85, risk_level="low")
+        result = generate_review_queue(
+            top5=[repo], evergreen=[], resource=[], high_risk=[], all_scored=[repo]
+        )
+        assert "A. 今日最推荐" in result, f"Expected A section, got:\n{result[:800]}"
+        assert "今日无强推荐项目" not in result, \
+            "High-score project should NOT show '今日无强推荐项目'"
+
+    def test_low_score_project_not_recommended(self):
+        """score < 75: 不在 A 区, 必须显示'今日无强推荐项目'."""
+        from src.report import generate_review_queue
+
+        repo = _make_scored_repo("test/weak-repo", score=55)
+        result = generate_review_queue(
+            top5=[repo], evergreen=[], resource=[], high_risk=[], all_scored=[repo]
+        )
+        assert "今日无强推荐项目" in result, \
+            f"Low-score project ({repo.score}) MUST show '今日无强推荐项目', got:\n{result[:800]}"
+        # Should NOT list this project under A section's recommendation table
+        # A section should be empty except for the "无强推荐" message
+        assert "A. 今日最推荐" in result
+
+    def test_candidate_range_shows_observable(self):
+        """score 60-74: 进入 B. 可观察候选, 不能进入 A."""
+        from src.report import generate_review_queue
+
+        repo = _make_scored_repo("test/ok-repo", score=68)
+        result = generate_review_queue(
+            top5=[repo], evergreen=[], resource=[], high_risk=[], all_scored=[repo]
+        )
+        assert "B. 可观察候选" in result, \
+            f"Score 60-74 should be in B section, got:\n{result[:800]}"
+        assert "今日无强推荐项目" in result, \
+            "Should also show '今日无强推荐项目' since nothing qualifies for A"
+
+    def test_needs_review_shows_human_review(self):
+        """score < 60: 进入 C. 需要人工审核."""
+        from src.report import generate_review_queue
+
+        repo = _make_scored_repo("test/poor-repo", score=35)
+        result = generate_review_queue(
+            top5=[repo], evergreen=[], resource=[], high_risk=[], all_scored=[repo]
+        )
+        assert "C. 需要人工审核" in result, \
+            f"Score < 60 should be in C section, got:\n{result[:800]}"
+
+    def test_no_qualified_projects_shows_clear_message(self):
+        """没有合格项目时, 明确输出'今日无强推荐项目' 而不是强行推荐."""
+        from src.report import generate_review_queue
+
+        # All top5 are low-score
+        repos = [
+            _make_scored_repo("test/low-a", score=45),
+            _make_scored_repo("test/low-b", score=50),
+            _make_scored_repo("test/low-c", score=55),
+        ]
+        result = generate_review_queue(
+            top5=repos, evergreen=[], resource=[], high_risk=[], all_scored=repos
+        )
+        assert "今日无强推荐项目" in result, \
+            "Must clearly state no strong recommendation"
+        # Should not present any project as "最推荐"
+        assert "| 项目 |" not in result.split("A. 今日最推荐")[1].split("## B.")[0], \
+            "Section A should be empty (only message, no recommendation table)"
+
+    def test_empty_top5_handled_gracefully(self):
+        """top5 为空时不应崩溃."""
+        from src.report import generate_review_queue
+
+        result = generate_review_queue(
+            top5=[], evergreen=[], resource=[], high_risk=[], all_scored=[]
+        )
+        assert "今日无强推荐项目" in result or "无高置信度" in result, \
+            "Empty top5 must not crash and should state no recommendations"

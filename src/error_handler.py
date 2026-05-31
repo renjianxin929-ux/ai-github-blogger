@@ -127,7 +127,7 @@ def github_request(
     url: str,
     headers: dict | None = None,
     timeout: int = 30,
-    max_retries: int = 3,
+    max_retries: int = 2,
     base_delay: float = 1.0,
     operation: str = "api_call",
     repo_name: str = "unknown",
@@ -202,8 +202,11 @@ def github_request(
                 time.sleep(wait)
         except requests.exceptions.SSLError as e:
             last_error = e
-            logger.error("SSL error for %s — not retrying", repo_name)
-            break
+            if attempt < max_retries:
+                wait = base_delay * (2 ** attempt)
+                logger.warning("SSL error for %s, retrying in %.0fs (attempt %d/%d)",
+                               repo_name, wait, attempt + 1, max_retries + 1)
+                time.sleep(wait)
         except requests.exceptions.ConnectionError as e:
             last_error = e
             if attempt < max_retries:

@@ -1,12 +1,15 @@
 """Repository enrichment — fetch metadata, README, license from GitHub API."""
-import base64
 import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
-import requests
-
-from .config import GITHUB_API_BASE, GITHUB_TOKEN, HTTP_TIMEOUT, MAX_README_CHARS
+from .config import GITHUB_TOKEN, MAX_README_CHARS
+from .error_handler import (
+    github_repo_meta,
+    github_readme,
+    github_contributors,
+    FailureSummary,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -46,74 +49,49 @@ def _build_headers() -> dict:
     return headers
 
 
-def enrich_repo(full_name: str) -> Optional[EnrichedRepo]:
+def enrich_repo(full_name: str, failure_summary: FailureSummary | None = None) -> Optional[EnrichedRepo]:
     """Fetch full metadata for a single GitHub repo.
 
-    Calls:
-      - GET /repos/{owner}/{repo}  → stars, forks, topics, license, etc.
-      - GET /repos/{owner}/{repo}/readme  → README (base64-decoded, truncated)
-      - GET /repos/{owner}/{repo}/contributors?per_page=5  → count
+    Uses retry-enabled wrappers from error_handler for exponential backoff
+    on transient failures (SSL EOF, timeout, connection reset, rate limit).
+    Max 2 retries per repo, logs skipped/retry_failed on exhaustion.
 
-    Returns None if the repo can't be fetched.
+    Returns None if repo metadata can't be fetched after all retries.
     """
     headers = _build_headers()
-    base_url = f"{GITHUB_API_BASE}/repos/{full_name}"
 
-    try:
-        # 1. Repo metadata
-        repo_resp = requests.get(base_url, headers=headers, timeout=HTTP_TIMEOUT)
-        repo_resp.raise_for_status()
-        repo_data = repo_resp.json()
-
-        # 2. README
-        readme = ""
-        try:
-            readme_resp = requests.get(
-                f"{base_url}/readme", headers=headers, timeout=HTTP_TIMEOUT
-            )
-            readme_resp.raise_for_status()
-            readme_data = readme_resp.json()
-            if readme_data.get("encoding") == "base64" and readme_data.get("content"):
-                readme = base64.b64decode(readme_data["content"]).decode("utf-8", errors="replace")
-                readme = readme[:MAX_README_CHARS]
-        except Exception:
-            logger.debug("No README found for %s", full_name)
-
-        # 3. Contributors count
-        contributors_count = 0
-        try:
-            contrib_resp = requests.get(
-                f"{base_url}/contributors?per_page=5",
-                headers=headers,
-                timeout=HTTP_TIMEOUT,
-            )
-            contrib_resp.raise_for_status()
-            contributors_count = len(contrib_resp.json())
-        except Exception:
-            logger.debug("Could not fetch contributors for %s", full_name)
-
-        # Extract license
-        license_str = ""
-        lic = repo_data.get("license")
-        if lic and isinstance(lic, dict):
-            license_str = lic.get("spdx_id", "")
-
-        return EnrichedRepo(
-            full_name=repo_data.get("full_name", full_name),
-            name=repo_data.get("name", full_name.split("/")[-1]),
-            description=repo_data.get("description", "") or "",
-            url=repo_data.get("html_url", ""),
-            language=repo_data.get("language", "") or "",
-            stars=repo_data.get("stargazers_count", 0),
-            forks=repo_data.get("forks_count", 0),
-            open_issues=repo_data.get("open_issues_count", 0),
-            updated_at=repo_data.get("updated_at", ""),
-            created_at=repo_data.get("created_at", ""),
-            topics=repo_data.get("topics", []),
-            license=license_str,
-            readme=readme,
-            contributors_count=contributors_count,
-        )
-    except Exception as e:
-        logger.warning("Failed to enrich %s: %s", full_name, e)
+    # 1. Repo metadata (with retry)
+    repo_data = github_repo_meta(full_name, headers, failure_summary=failure_summary)
+    if repo_data is None:
+        logger.warning("Skipped %s: repo_meta retry_failed", full_name)
         return None
+
+    # 2. README (with retry; None is expected for repos without README)
+    readme_raw = github_readme(full_name, headers, failure_summary=failure_summary)
+    readme = (readme_raw or "")[:MAX_README_CHARS]
+
+    # 3. Contributors count (with retry; returns 0 on failure)
+    contributors_count = github_contributors(full_name, headers, failure_summary=failure_summary)
+
+    # Extract license
+    license_str = ""
+    lic = repo_data.get("license")
+    if lic and isinstance(lic, dict):
+        license_str = lic.get("spdx_id", "")
+
+    return EnrichedRepo(
+        full_name=repo_data.get("full_name", full_name),
+        name=repo_data.get("name", full_name.split("/")[-1]),
+        description=repo_data.get("description", "") or "",
+        url=repo_data.get("html_url", ""),
+        language=repo_data.get("language", "") or "",
+        stars=repo_data.get("stargazers_count", 0),
+        forks=repo_data.get("forks_count", 0),
+        open_issues=repo_data.get("open_issues_count", 0),
+        updated_at=repo_data.get("updated_at", ""),
+        created_at=repo_data.get("created_at", ""),
+        topics=repo_data.get("topics", []),
+        license=license_str,
+        readme=readme,
+        contributors_count=contributors_count,
+    )

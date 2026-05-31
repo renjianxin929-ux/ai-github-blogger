@@ -872,16 +872,32 @@ def generate_review_queue(
         "",
     ]
 
-    # ── Section 0: Most Recommended Today ─────────────────────────
-    lines.append("## 零、今日最推荐发布")
+    # ── Section 0: Recommendations (4-tier) ─────────────────────────
+    #
+    # Tier logic:
+    #   A. 今日最推荐 — score >= 75  (qualified strong recommendation)
+    #   B. 可观察候选   — score 60-74 (candidate, NOT marked as best)
+    #   C. 需要人工审核 — score < 60  (needs human review before publishing)
+    #   D. 不建议发布   — blocked / high-risk
+    #
+    # Stars alone do NOT decide recommendation; README quality, license,
+    # activity, risk, and platform fit are all factored into the score.
+
+    QUALIFIED_THRESHOLD = 75   # score >= this → A. 今日最推荐
+    CANDIDATE_THRESHOLD = 60   # score >= this → B. 可观察候选; below → C. 需要人工审核
+
+    best = top5[0] if top5 else None
+    best_score = best.score if best else 0
+
+    lines.append("## A. 今日最推荐")
     lines.append("")
-    if top5:
-        best = top5[0]
+
+    if best and best_score >= QUALIFIED_THRESHOLD:
         bv = score_business_value(best)
         pf = score_platform_fit(best)
         risk = assess_risk(best)
         reasons = []
-        if best.score >= 70:
+        if best.score >= 75:
             reasons.append(f"高选题分({best.score:.0f}/100)")
         if best.stars >= 1000:
             reasons.append(f"高Star数({best.stars})")
@@ -929,7 +945,69 @@ def generate_review_queue(
             lines.append(f"| 操作 | `python run.py content {best.full_name}` |")
         lines.append("")
     else:
-        lines.append("> 今日无高置信度 Top 5 选题，无法推荐。")
+        lines.append("> **今日无强推荐项目。**")
+        lines.append("> ")
+        if best:
+            lines.append(f"> 当前最高分项目 `{best.full_name}` 仅 {best_score:.0f}/100 分，未达到最推荐阈值（≥{QUALIFIED_THRESHOLD}）。")
+            lines.append(f"> 高 Star 数不能单独决定推荐，需综合 README 质量、许可证、活跃度、风险、平台适配。")
+        else:
+            lines.append("> 今日无高置信度 Top 5 选题。")
+        lines.append("> 建议：查看下方可观察候选或人工审核队列，或等待下一轮抓取。")
+        lines.append("")
+
+    # ── B. 可观察候选 ───────────────────────────────────────────
+    lines.append("## B. 可观察候选")
+    lines.append("")
+    candidates = [r for r in top5 if CANDIDATE_THRESHOLD <= r.score < QUALIFIED_THRESHOLD] if top5 else []
+    if candidates:
+        lines.append("| # | 项目 | 评分 | Stars | 许可证 | 风险 | 适合平台 | 备注 |")
+        lines.append("|---|------|------|-------|--------|------|----------|------|")
+        for i, r in enumerate(candidates[:5], 1):
+            risk = assess_risk(r)
+            pf = score_platform_fit(r)
+            platforms = pf.best_platform or "深度分析"
+            notes_parts = []
+            if r.content_type == "unclear":
+                notes_parts.append("README信息不足")
+            if r.stars < 100:
+                notes_parts.append("低star待验证")
+            if not r.license:
+                notes_parts.append("许可证不明")
+            lines.append(
+                f"| {i} | [{r.full_name}]({r.url}) | {r.score:.0f} | {r.stars} | {r.license or '不明'} | {risk.overall} | {platforms} | {'; '.join(notes_parts) if notes_parts else '观察中'} |"
+            )
+        lines.append("")
+    else:
+        lines.append("> 今日无可观察候选（60-74分段）。")
+        lines.append("")
+
+    # ── C. 需要人工审核 ─────────────────────────────────────────
+    lines.append("## C. 需要人工审核")
+    lines.append("")
+    needs_review = [r for r in top5 if r.score < CANDIDATE_THRESHOLD] if top5 else []
+    if needs_review:
+        lines.append("| # | 项目 | 评分 | Stars | 降权/风险原因 | 建议操作 |")
+        lines.append("|---|------|------|-------|---------------|----------|")
+        for i, r in enumerate(needs_review[:5], 1):
+            risk = assess_risk(r)
+            reasons = []
+            if r.content_type == "unclear":
+                reasons.append("README信息不足")
+            if r.score < 40:
+                reasons.append("综合评分过低")
+            if risk.overall in ("medium", "high"):
+                reasons.append(f"风险={risk.overall}")
+            if r.stars < 100:
+                reasons.append("低star")
+            if not r.license:
+                reasons.append("许可证不明")
+            action = "人工审核后再决定" if r.score >= 40 else "不建议采用"
+            lines.append(
+                f"| {i} | [{r.full_name}]({r.url}) | {r.score:.0f} | {r.stars} | {'; '.join(reasons) if reasons else '评分未达标'} | {action} |"
+            )
+        lines.append("")
+    else:
+        lines.append("> 今日无需人工审核的低分候选。")
         lines.append("")
     lines.append("---")
     lines.append("")
@@ -986,7 +1064,7 @@ def generate_review_queue(
     lines.append("---")
 
     # ── Category 2: Needs Human Review ──────────────────────────────
-    lines.append("## 二、需要人工审核")
+    lines.append("## 补充审核 — 其他待审项目")
     lines.append("")
     needs_review = [r for r in all_scored if r.pool in ("review",) and r.full_name not in {t.full_name for t in top5}]
     # Also include any with risk=medium and not in other pools

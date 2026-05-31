@@ -1,6 +1,5 @@
 """Tests for enricher.py — GitHub API metadata fetching."""
 import base64
-import json
 from unittest import mock
 
 import pytest
@@ -21,39 +20,22 @@ REPO_API_FIXTURE = {
     "license": {"spdx_id": "MIT"},
 }
 
-README_FIXTURE = {
-    "content": base64.b64encode(b"# Awesome Repo\n\nThis is a comprehensive AI framework.\n" * 50).decode(),
-    "encoding": "base64",
-}
-
-CONTRIBUTORS_FIXTURE = [{}, {}, {}, {}, {}]  # 5 contributors
+README_CONTENT = "# Awesome Repo\n\nThis is a comprehensive AI framework.\n" * 50
 
 
 class TestEnrichRepo:
     """Test the enrich_repo function."""
 
-    @mock.patch("src.enricher.requests.get")
-    def test_enrich_repo_returns_full_data(self, mock_get):
+    @mock.patch("src.enricher.github_contributors")
+    @mock.patch("src.enricher.github_readme")
+    @mock.patch("src.enricher.github_repo_meta")
+    def test_enrich_repo_returns_full_data(self, mock_meta, mock_readme, mock_contrib):
         """Should fetch and combine repo metadata, README, and contributors."""
         from src.enricher import enrich_repo
 
-        # Set up three mock responses: repo info, readme, contributors
-        mock_repo_resp = mock.MagicMock()
-        mock_repo_resp.status_code = 200
-        mock_repo_resp.json.return_value = REPO_API_FIXTURE
-        mock_repo_resp.raise_for_status = lambda: None
-
-        mock_readme_resp = mock.MagicMock()
-        mock_readme_resp.status_code = 200
-        mock_readme_resp.json.return_value = README_FIXTURE
-        mock_readme_resp.raise_for_status = lambda: None
-
-        mock_contrib_resp = mock.MagicMock()
-        mock_contrib_resp.status_code = 200
-        mock_contrib_resp.json.return_value = CONTRIBUTORS_FIXTURE
-        mock_contrib_resp.raise_for_status = lambda: None
-
-        mock_get.side_effect = [mock_repo_resp, mock_readme_resp, mock_contrib_resp]
+        mock_meta.return_value = dict(REPO_API_FIXTURE)
+        mock_readme.return_value = README_CONTENT
+        mock_contrib.return_value = 5
 
         repo = enrich_repo("test/awesome-repo")
 
@@ -65,59 +47,113 @@ class TestEnrichRepo:
         assert len(repo.readme) > 200
         assert repo.contributors_count == 5
 
-    @mock.patch("src.enricher.requests.get")
-    def test_enrich_repo_handles_missing_license(self, mock_get):
-        """REPOS with no license should have empty string."""
+    @mock.patch("src.enricher.github_contributors")
+    @mock.patch("src.enricher.github_readme")
+    @mock.patch("src.enricher.github_repo_meta")
+    def test_enrich_repo_handles_missing_license(self, mock_meta, mock_readme, mock_contrib):
+        """Repos with no license should have empty string."""
         from src.enricher import enrich_repo
 
         no_license = dict(REPO_API_FIXTURE)
         no_license["license"] = None
 
-        mock_repo = mock.MagicMock()
-        mock_repo.status_code = 200
-        mock_repo.json.return_value = no_license
-        mock_repo.raise_for_status = lambda: None
-
-        mock_readme = mock.MagicMock()
-        mock_readme.status_code = 200
-        mock_readme.json.return_value = README_FIXTURE
-        mock_readme.raise_for_status = lambda: None
-
-        mock_contrib = mock.MagicMock()
-        mock_contrib.status_code = 200
-        mock_contrib.json.return_value = CONTRIBUTORS_FIXTURE
-        mock_contrib.raise_for_status = lambda: None
-
-        mock_get.side_effect = [mock_repo, mock_readme, mock_contrib]
+        mock_meta.return_value = no_license
+        mock_readme.return_value = README_CONTENT
+        mock_contrib.return_value = 3
 
         repo = enrich_repo("test/no-license")
         assert repo.license == ""
 
-    @mock.patch("src.enricher.requests.get")
-    def test_readme_truncated_to_max_chars(self, mock_get):
+    @mock.patch("src.enricher.github_contributors")
+    @mock.patch("src.enricher.github_readme")
+    @mock.patch("src.enricher.github_repo_meta")
+    def test_readme_truncated_to_max_chars(self, mock_meta, mock_readme, mock_contrib):
         """README content should be truncated to MAX_README_CHARS."""
         from src.enricher import enrich_repo
 
-        long_readme = base64.b64encode(b"x" * 20000).decode()
-        readme_fix = {"content": long_readme, "encoding": "base64"}
+        long_readme = "x" * 20000
 
-        mock_repo = mock.MagicMock()
-        mock_repo.status_code = 200
-        mock_repo.json.return_value = REPO_API_FIXTURE
-        mock_repo.raise_for_status = lambda: None
-
-        mock_readme = mock.MagicMock()
-        mock_readme.status_code = 200
-        mock_readme.json.return_value = readme_fix
-        mock_readme.raise_for_status = lambda: None
-
-        mock_contrib = mock.MagicMock()
-        mock_contrib.status_code = 200
-        mock_contrib.json.return_value = CONTRIBUTORS_FIXTURE
-        mock_contrib.raise_for_status = lambda: None
-
-        mock_get.side_effect = [mock_repo, mock_readme, mock_contrib]
+        mock_meta.return_value = dict(REPO_API_FIXTURE)
+        mock_readme.return_value = long_readme
+        mock_contrib.return_value = 0
 
         repo = enrich_repo("test/big-readme")
         # MAX_README_CHARS is 8000, so content should be ≤ 8000
         assert len(repo.readme) <= 8000
+
+    @mock.patch("src.enricher.github_repo_meta")
+    def test_enrich_repo_handles_metadata_failure(self, mock_meta):
+        """When repo_meta returns None after retries, enrich_repo returns None."""
+        from src.enricher import enrich_repo
+
+        mock_meta.return_value = None
+
+        repo = enrich_repo("test/dead-repo")
+        assert repo is None
+
+    @mock.patch("src.enricher.github_contributors")
+    @mock.patch("src.enricher.github_readme")
+    @mock.patch("src.enricher.github_repo_meta")
+    def test_enrich_repo_graceful_readme_none(self, mock_meta, mock_readme, mock_contrib):
+        """When README returns None (no README in repo), should still return EnrichedRepo."""
+        from src.enricher import enrich_repo
+
+        mock_meta.return_value = dict(REPO_API_FIXTURE)
+        mock_readme.return_value = None  # no README
+        mock_contrib.return_value = 2
+
+        repo = enrich_repo("test/no-readme")
+        assert repo is not None
+        assert repo.readme == ""
+        assert repo.stars == 5000
+
+
+class TestEnricherRetryBehavior:
+    """Verify that enrich_repo handles transient failures gracefully via error_handler retries."""
+
+    @mock.patch("src.enricher.github_contributors")
+    @mock.patch("src.enricher.github_readme")
+    @mock.patch("src.enricher.github_repo_meta")
+    def test_ssl_error_does_not_crash_enrich(self, mock_meta, mock_readme, mock_contrib):
+        """SSL EOF is retried by github_request; if all retries exhausted, enrich_repo returns None gracefully."""
+        from src.enricher import enrich_repo
+
+        mock_meta.return_value = None  # all retries exhausted
+        # readme/contrib should not be called if meta fails
+        mock_readme.return_value = None
+        mock_contrib.return_value = 0
+
+        repo = enrich_repo("test/ssl-fail-repo")
+        # Must not crash — returns None, logged as skipped
+        assert repo is None
+
+    @mock.patch("src.enricher.github_contributors")
+    @mock.patch("src.enricher.github_readme")
+    @mock.patch("src.enricher.github_repo_meta")
+    def test_timeout_does_not_crash_enrich(self, mock_meta, mock_readme, mock_contrib):
+        """Timeout errors are retried; failure returns None without crashing."""
+        from src.enricher import enrich_repo
+
+        mock_meta.return_value = None  # all retries exhausted
+        mock_readme.return_value = None
+        mock_contrib.return_value = 0
+
+        repo = enrich_repo("test/timeout-repo")
+        assert repo is None  # graceful degradation, daily-workflow continues
+
+    @mock.patch("src.enricher.github_contributors")
+    @mock.patch("src.enricher.github_readme")
+    @mock.patch("src.enricher.github_repo_meta")
+    def test_partial_failure_still_returns_repo(self, mock_meta, mock_readme, mock_contrib):
+        """If meta succeeds but readme/contrib fail, still get a valid EnrichedRepo (graceful degradation)."""
+        from src.enricher import enrich_repo
+
+        mock_meta.return_value = dict(REPO_API_FIXTURE)
+        mock_readme.return_value = None  # README failed
+        mock_contrib.return_value = 0     # contributors failed
+
+        repo = enrich_repo("test/partial-fail")
+        assert repo is not None
+        assert repo.full_name == "test/awesome-repo"
+        assert repo.readme == ""
+        assert repo.contributors_count == 0
