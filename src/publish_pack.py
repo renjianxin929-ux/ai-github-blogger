@@ -25,7 +25,8 @@ PACK_FILES = {
     "next_actions": "05_next_actions.md",
 }
 
-QUALIFIED_THRESHOLD = 75
+PUBLISHABILITY_THRESHOLD = 40  # "能不能写出好内容"的最低门槛
+CONTENT_PACK_QUALITY_THRESHOLD = 70  # content pack manifest 的 LLM 审核分门槛
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -207,16 +208,29 @@ def _find_best_from_review_queue() -> str | None:
         return None
 
     best_name = None
-    best_score = 0
+    best_pub = 0
+    best_raw = 0
+    best_stars = 0
 
     for item in top5:
-        score = item.get("score", 0) if isinstance(item, dict) else getattr(item, "score", 0)
+        pub_score = item.get("publishability_score", 0) if isinstance(item, dict) else getattr(item, "publishability_score", 0)
+        raw_score = item.get("score", 0) if isinstance(item, dict) else getattr(item, "score", 0)
+        stars = item.get("stars", 0) if isinstance(item, dict) else getattr(item, "stars", 0)
         name = item.get("full_name", "") if isinstance(item, dict) else getattr(item, "full_name", "")
-        if score >= QUALIFIED_THRESHOLD and score > best_score:
-            best_score = score
+
+        if pub_score < PUBLISHABILITY_THRESHOLD:
+            continue
+
+        # Multi-key sort: publishability_score > score > stars
+        if (pub_score > best_pub or
+                (pub_score == best_pub and raw_score > best_raw) or
+                (pub_score == best_pub and raw_score == best_raw and stars > best_stars)):
+            best_pub = pub_score
+            best_raw = raw_score
+            best_stars = stars
             best_name = name
 
-    # Fallback: if no score in top5 data, try content pack manifests
+    # Fallback: if no top5 data qualifies, try content pack manifests
     if best_name is None:
         best_name = _find_best_from_content_packs()
 
@@ -235,7 +249,7 @@ def _find_best_from_content_packs() -> str | None:
             rec = data.get("quality_review_recommendation", "")
             blocking = data.get("blocking", 0)
             repo = data.get("repo", "")
-            if score >= QUALIFIED_THRESHOLD and rec == "yes" and blocking == 0 and score > best_score:
+            if score >= CONTENT_PACK_QUALITY_THRESHOLD and rec == "yes" and blocking == 0 and score > best_score:
                 best_score = score
                 best_name = repo
         except Exception:

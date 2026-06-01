@@ -1044,84 +1044,140 @@ def cmd_daily_workflow() -> int:
         print("     请用简报中的素材在 30 分钟内人工补写。")
     print()
 
-    # ── Section 2: 推荐分级 (A/B/C/D) ──
-    QUALIFIED = 75
-    CANDIDATE = 60
+    # ── Section 2: 推荐分级 (A/B/C/D) — 基于 publishability_score ──
+    PUB_A = 75   # publishability_score >= 75  → A. 今日最推荐
+    PUB_B = 60   # publishability_score >= 60  → B. 可观察候选
+    PUB_C = 40   # publishability_score >= 40  → C. 需要人工审核
 
-    best = top5[0] if top5 else None
-    best_score = best.get("score", 0) if best else 0
+    # Sort top5 by publishability_score desc, then score, then stars
+    if top5:
+        top5_sorted = sorted(top5, key=lambda r: (
+            r.get("publishability_score", 0),
+            r.get("score", 0),
+            r.get("stars", 0),
+        ), reverse=True)
+    else:
+        top5_sorted = []
+
+    best = top5_sorted[0] if top5_sorted else None
+    best_pub = best.get("publishability_score", 0) if best else 0
+    best_raw = best.get("score", 0) if best else 0
+
+    # ── 决策摘要 ──
+    print("── 今日决策摘要 ──")
+    print()
+    if top5_sorted:
+        for i, r in enumerate(top5_sorted[:5]):
+            pub = r.get("publishability_score", 0)
+            raw = r.get("score", 0)
+            name = r.get("full_name", r.get("name", "unknown"))
+            stars = r.get("stars", 0)
+            topics = r.get("topics", [])
+            if pub >= PUB_C:
+                icon = "✅" if pub >= PUB_A else ("⚠️" if pub >= PUB_B else "📋")
+                print(f"  {icon} {name}")
+                print(f"     可发布性 {pub:.0f}/100 | 选题参考 {raw:.0f} | ⭐{stars}")
+                if topics:
+                    print(f"     标签: {', '.join(topics[:4])}")
+            else:
+                print(f"  ❌ {name} — 可发布性 {pub:.0f}/100 不足，不推荐")
+        # Summary line
+        qualified = [r for r in top5_sorted if r.get("publishability_score", 0) >= PUB_C]
+        print()
+        if qualified:
+            print(f"  共 {len(qualified)}/{len(top5_sorted)} 个项目达到可发布门槛（≥{PUB_C}分）")
+            est_minutes = len(qualified) * 15 + 10
+            print(f"  ⏱️ 预计人工耗时: ~{est_minutes} 分钟（生成+审核+发布）")
+        else:
+            print(f"  今日无项目达到可发布门槛（publishability_score ≥ {PUB_C}）")
+    else:
+        print("  今日无 Top5 数据。运行 python run.py daily --no-llm 生成。")
+    print()
 
     print("── A. 今日最推荐 ──")
     print()
-    if best and best_score >= QUALIFIED:
+    if best and best_pub >= PUB_A:
         name = best.get("full_name", best.get("name", "unknown"))
         stars = best.get("stars", 0)
-        pub_score = best.get("publishability_score", 0)
+        pub_score = best_pub
+        raw_score = best_raw
         desc = best.get("description", "")[:120]
         content_type = best.get("content_type", "unclear")
         topics = best.get("topics", [])
         reason_parts = []
-        if pub_score >= 60:
-            reason_parts.append(f"可发布性高({pub_score:.0f}/100)")
+        reason_parts.append(f"可发布性 {pub_score:.0f}/100")
+        if raw_score >= 60:
+            reason_parts.append(f"选题参考 {raw_score:.0f}/100")
         if stars >= 1000:
             reason_parts.append(f"社区认可({stars} stars)")
         if content_type == "runnable_project":
             reason_parts.append("可运行项目，素材充分")
         if desc:
-            reason_parts.append(f"一句话: {desc}")
+            reason_parts.append(f"简介: {desc}")
         if not reason_parts:
-            reason_parts.append(f"综合评分最高({best_score:.0f}/100)")
+            reason_parts.append(f"可发布性最高({pub_score:.0f}/100)")
 
         print(f"  项目: {name}")
         print(f"  推荐理由: {'; '.join(reason_parts)}")
         if topics:
             print(f"  标签: {', '.join(topics[:5])}")
-        if llm_available and pub_score >= 40:
+        if llm_available:
             print(f"  操作: python run.py content {name}")
-        elif not llm_available:
-            print(f"  操作: python run.py content {name}  # 将进入 structured_fallback 模式")
         else:
-            print(f"  注意: 可发布性不足({pub_score:.0f})，建议人工审核后再生成")
+            print(f"  操作: python run.py content {name}  # structured_fallback 模式")
     else:
         print("  今日无强推荐项目。")
         if best:
-            print(f"  当前最高分 {best.get('full_name', '?')} 仅 {best_score:.0f}/100，未达到推荐阈值（≥{QUALIFIED}）。")
+            print(f"  当前最高可发布性 {best.get('full_name', '?')} 仅 {best_pub:.0f}/100，未达推荐阈值（≥{PUB_A}）。")
         else:
             print("  今日无高置信度 Top 5 选题。")
 
     # ── B. 可观察候选 ──
     print()
-    print(f"── B. 可观察候选 ({CANDIDATE}-{QUALIFIED-1}分) ──")
+    print(f"── B. 可观察候选（可发布性 {PUB_B}-{PUB_A - 1}）──")
     print()
-    candidates = [r for r in top5 if CANDIDATE <= r.get("score", 0) < QUALIFIED] if top5 else []
+    candidates = [r for r in top5_sorted if PUB_B <= r.get("publishability_score", 0) < PUB_A]
     if candidates:
         for r in candidates[:5]:
             rname = r.get("full_name", r.get("name", "unknown"))
-            rscore = r.get("score", 0)
+            rpub = r.get("publishability_score", 0)
+            rraw = r.get("score", 0)
             rstars = r.get("stars", 0)
-            print(f"  - {rname} ({rscore:.0f}分, {rstars} stars)")
+            print(f"  - {rname} (可发布性 {rpub:.0f}, 选题参考 {rraw:.0f}, {rstars} stars)")
     else:
         print("  今日无此分段候选。")
 
     # ── C. 需要人工审核 ──
     print()
-    print(f"── C. 需要人工审核 (<{CANDIDATE}分) ──")
+    print(f"── C. 需要人工审核（可发布性 {PUB_C}-{PUB_B - 1}）──")
     print()
-    review_list = [r for r in top5 if r.get("score", 0) < CANDIDATE] if top5 else []
+    review_list = [r for r in top5_sorted if PUB_C <= r.get("publishability_score", 0) < PUB_B]
     if review_list:
         for r in review_list[:5]:
             rname = r.get("full_name", r.get("name", "unknown"))
-            rscore = r.get("score", 0)
-            print(f"  - {rname} ({rscore:.0f}分) — 需人工审核后决定")
+            rpub = r.get("publishability_score", 0)
+            rraw = r.get("score", 0)
+            print(f"  - {rname} (可发布性 {rpub:.0f}, 选题参考 {rraw:.0f}) — 需人工审核后决定")
     else:
         print("  今日无此分段候选。")
+
+    # ── D. 不推荐 ──
+    below = [r for r in top5_sorted if r.get("publishability_score", 0) < PUB_C] if top5_sorted else []
+    if below:
+        print()
+        print(f"── D. 不推荐（可发布性 < {PUB_C}）──")
+        print()
+        for r in below[:5]:
+            rname = r.get("full_name", r.get("name", "unknown"))
+            rpub = r.get("publishability_score", 0)
+            print(f"  - {rname} (可发布性 {rpub:.0f}) — 不建议今日发布")
     print()
 
     # ── Section 3: 下一步命令 ──
     print("── 下一步命令 ──")
     print()
-    if llm_available and top5:
-        best_name = top5[0].get("full_name", top5[0].get("name", ""))
+    if llm_available and top5_sorted:
+        best_name = top5_sorted[0].get("full_name", top5_sorted[0].get("name", ""))
         print(f"  生成内容:  python run.py content {best_name}")
     print("  审核队列:    python run.py review-queue")
     print("  LLM 诊断:    python run.py llm-doctor")

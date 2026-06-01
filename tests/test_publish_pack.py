@@ -387,3 +387,92 @@ class TestPublishPackEdgeCases:
             best = _find_best_from_content_packs()
 
         assert best is None
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Phase 20: publishability_score threshold tests
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+class TestPublishabilityThreshold:
+    """publishability_score >= 40 阈值行为验证 — Phase 20."""
+
+    def test_high_pubscore_qualifies(self, tmp_path):
+        """publishability_score >= 40 时可以进入候选，即使 raw score 低."""
+        from src.publish_pack import _find_best_from_review_queue
+
+        top5_data = [
+            {"full_name": "test/high-pub", "name": "high-pub",
+             "publishability_score": 85, "score": 30, "stars": 100},
+        ]
+        reports_dir = tmp_path / "reports"
+        reports_dir.mkdir()
+        (reports_dir / "top5_2026-06-01.json").write_text(
+            json.dumps(top5_data), encoding="utf-8")
+
+        with mock.patch("src.config.REPORTS_DIR", reports_dir):
+            best = _find_best_from_review_queue()
+
+        assert best == "test/high-pub"
+
+    def test_low_raw_score_not_killed(self, tmp_path):
+        """raw score 低但 publishability_score 高时，不被误杀."""
+        from src.publish_pack import _find_best_from_review_queue
+
+        top5_data = [
+            {"full_name": "test/great-content", "name": "great-content",
+             "publishability_score": 80, "score": 25, "stars": 200},
+        ]
+        reports_dir = tmp_path / "reports"
+        reports_dir.mkdir()
+        (reports_dir / "top5_2026-06-01.json").write_text(
+            json.dumps(top5_data), encoding="utf-8")
+
+        with mock.patch("src.config.REPORTS_DIR", reports_dir):
+            best = _find_best_from_review_queue()
+
+        assert best == "test/great-content", \
+            "raw score 低但 publishability 高的项目不应被过滤"
+
+    def test_low_pubscore_not_recommended(self, tmp_path):
+        """publishability_score < 40 时不推荐，即使 raw score 高."""
+        from src.publish_pack import _find_best_from_review_queue
+
+        top5_data = [
+            {"full_name": "test/low-pub", "name": "low-pub",
+             "publishability_score": 35, "score": 90, "stars": 5000},
+        ]
+        reports_dir = tmp_path / "reports"
+        reports_dir.mkdir()
+        (reports_dir / "top5_2026-06-01.json").write_text(
+            json.dumps(top5_data), encoding="utf-8")
+
+        with mock.patch("src.config.REPORTS_DIR", reports_dir), \
+             mock.patch("src.publish_pack._find_best_from_content_packs", return_value=None):
+            best = _find_best_from_review_queue()
+
+        assert best is None, \
+            f"publishability_score < 40 不应推荐，但返回了 {best}"
+
+    def test_multi_key_sort_order(self, tmp_path):
+        """排序优先级: publishability_score > score > stars."""
+        from src.publish_pack import _find_best_from_review_queue
+
+        top5_data = [
+            {"full_name": "test/second", "name": "second",
+             "publishability_score": 80, "score": 70, "stars": 100},
+            {"full_name": "test/first", "name": "first",
+             "publishability_score": 85, "score": 50, "stars": 50},
+            {"full_name": "test/third", "name": "third",
+             "publishability_score": 80, "score": 65, "stars": 500},
+        ]
+        reports_dir = tmp_path / "reports"
+        reports_dir.mkdir()
+        (reports_dir / "top5_2026-06-01.json").write_text(
+            json.dumps(top5_data), encoding="utf-8")
+
+        with mock.patch("src.config.REPORTS_DIR", reports_dir):
+            best = _find_best_from_review_queue()
+
+        assert best == "test/first", \
+            f"应选 publishability_score 最高的 test/first，但返回了 {best}"

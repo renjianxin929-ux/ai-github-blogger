@@ -874,31 +874,34 @@ def generate_review_queue(
 
     # ── Section 0: Recommendations (4-tier) ─────────────────────────
     #
-    # Tier logic:
-    #   A. 今日最推荐 — score >= 75  (qualified strong recommendation)
-    #   B. 可观察候选   — score 60-74 (candidate, NOT marked as best)
-    #   C. 需要人工审核 — score < 60  (needs human review before publishing)
-    #   D. 不建议发布   — blocked / high-risk
+    # Tier logic (Phase 20: based on publishability_score):
+    #   A. 今日最推荐 — publishability_score >= 75
+    #   B. 可观察候选   — publishability_score 60-74
+    #   C. 需要人工审核 — publishability_score 40-59
+    #   < 40 — 不推荐
     #
-    # Stars alone do NOT decide recommendation; README quality, license,
-    # activity, risk, and platform fit are all factored into the score.
+    # raw score is preserved for reference only ("选题参考分").
 
-    QUALIFIED_THRESHOLD = 75   # score >= this → A. 今日最推荐
-    CANDIDATE_THRESHOLD = 60   # score >= this → B. 可观察候选; below → C. 需要人工审核
+    PUB_A_THRESHOLD = 75   # publishability_score >= this → A. 今日最推荐
+    PUB_B_THRESHOLD = 60   # publishability_score >= this → B. 可观察候选
+    PUB_C_THRESHOLD = 40   # publishability_score >= this → C. 需要人工审核; below → 不推荐
 
     best = top5[0] if top5 else None
-    best_score = best.score if best else 0
+    best_pub = getattr(best, 'publishability_score', 0) if best else 0
+    best_raw = best.score if best else 0
 
     lines.append("## A. 今日最推荐")
     lines.append("")
 
-    if best and best_score >= QUALIFIED_THRESHOLD:
+    if best and best_pub >= PUB_A_THRESHOLD:
         bv = score_business_value(best)
         pf = score_platform_fit(best)
         risk = assess_risk(best)
         reasons = []
-        if best.score >= 75:
-            reasons.append(f"高选题分({best.score:.0f}/100)")
+        if best_pub >= 75:
+            reasons.append(f"高可发布性({best_pub:.0f}/100)")
+        if best.score >= 60:
+            reasons.append(f"选题参考分 {best.score:.0f}/100")
         if best.stars >= 1000:
             reasons.append(f"高Star数({best.stars})")
         if best.license:
@@ -932,11 +935,11 @@ def generate_review_queue(
             suitable.append("公众号")
 
         needs_edit = "是" if (risk_points or best.content_type == "unclear") else "否"
-        ready_for_content = "是" if (best.score >= 65 and risk.overall in ("low", "none")) else "需人工审核后决定"
+        ready_for_content = "是" if (best_pub >= PUB_C_THRESHOLD and risk.overall in ("low", "none")) else "需人工审核后决定"
 
         lines.append(f"| 项目 | [{best.full_name}]({best.url}) |")
-        lines.append(f"| 评分 | {best.score:.0f}/100 |")
-        lines.append(f"| 为什么推荐 | {'；'.join(reasons) if reasons else '规则综合评分最高'} |")
+        lines.append(f"| 可发布性 | {best_pub:.0f}/100（选题参考 {best_raw:.0f}） |")
+        lines.append(f"| 为什么推荐 | {'；'.join(reasons) if reasons else '可发布性最高'} |")
         lines.append(f"| 风险点 | {'；'.join(risk_points) if risk_points else '无重大风险'} |")
         lines.append(f"| 适合平台 | {'、'.join(suitable)} |")
         lines.append(f"| 是否需要人工改稿 | {needs_edit} |")
@@ -948,7 +951,7 @@ def generate_review_queue(
         lines.append("> **今日无强推荐项目。**")
         lines.append("> ")
         if best:
-            lines.append(f"> 当前最高分项目 `{best.full_name}` 仅 {best_score:.0f}/100 分，未达到最推荐阈值（≥{QUALIFIED_THRESHOLD}）。")
+            lines.append(f"> 当前最高可发布性 `{best.full_name}` 仅 {best_pub:.0f}/100 分，未达到最推荐阈值（≥{PUB_A_THRESHOLD}）。")
             lines.append(f"> 高 Star 数不能单独决定推荐，需综合 README 质量、许可证、活跃度、风险、平台适配。")
         else:
             lines.append("> 今日无高置信度 Top 5 选题。")
@@ -958,14 +961,15 @@ def generate_review_queue(
     # ── B. 可观察候选 ───────────────────────────────────────────
     lines.append("## B. 可观察候选")
     lines.append("")
-    candidates = [r for r in top5 if CANDIDATE_THRESHOLD <= r.score < QUALIFIED_THRESHOLD] if top5 else []
+    candidates = [r for r in top5 if PUB_B_THRESHOLD <= getattr(r, 'publishability_score', 0) < PUB_A_THRESHOLD] if top5 else []
     if candidates:
-        lines.append("| # | 项目 | 评分 | Stars | 许可证 | 风险 | 适合平台 | 备注 |")
-        lines.append("|---|------|------|-------|--------|------|----------|------|")
+        lines.append("| # | 项目 | 可发布性 | 选题参考 | Stars | 许可证 | 风险 | 适合平台 | 备注 |")
+        lines.append("|---|------|---------|---------|-------|--------|------|----------|------|")
         for i, r in enumerate(candidates[:5], 1):
             risk = assess_risk(r)
             pf = score_platform_fit(r)
             platforms = pf.best_platform or "深度分析"
+            r_pub = getattr(r, 'publishability_score', 0)
             notes_parts = []
             if r.content_type == "unclear":
                 notes_parts.append("README信息不足")
@@ -974,36 +978,37 @@ def generate_review_queue(
             if not r.license:
                 notes_parts.append("许可证不明")
             lines.append(
-                f"| {i} | [{r.full_name}]({r.url}) | {r.score:.0f} | {r.stars} | {r.license or '不明'} | {risk.overall} | {platforms} | {'; '.join(notes_parts) if notes_parts else '观察中'} |"
+                f"| {i} | [{r.full_name}]({r.url}) | {r_pub:.0f} | {r.score:.0f} | {r.stars} | {r.license or '不明'} | {risk.overall} | {platforms} | {'; '.join(notes_parts) if notes_parts else '观察中'} |"
             )
         lines.append("")
     else:
-        lines.append("> 今日无可观察候选（60-74分段）。")
+        lines.append(f"> 今日无可观察候选（可发布性 {PUB_B_THRESHOLD}-{PUB_A_THRESHOLD - 1}）。")
         lines.append("")
 
     # ── C. 需要人工审核 ─────────────────────────────────────────
     lines.append("## C. 需要人工审核")
     lines.append("")
-    needs_review = [r for r in top5 if r.score < CANDIDATE_THRESHOLD] if top5 else []
+    needs_review = [r for r in top5 if getattr(r, 'publishability_score', 0) < PUB_B_THRESHOLD] if top5 else []
     if needs_review:
-        lines.append("| # | 项目 | 评分 | Stars | 降权/风险原因 | 建议操作 |")
-        lines.append("|---|------|------|-------|---------------|----------|")
+        lines.append("| # | 项目 | 可发布性 | 选题参考 | Stars | 降权/风险原因 | 建议操作 |")
+        lines.append("|---|------|---------|---------|-------|---------------|----------|")
         for i, r in enumerate(needs_review[:5], 1):
             risk = assess_risk(r)
+            r_pub = getattr(r, 'publishability_score', 0)
             reasons = []
             if r.content_type == "unclear":
                 reasons.append("README信息不足")
-            if r.score < 40:
-                reasons.append("综合评分过低")
+            if r_pub < PUB_C_THRESHOLD:
+                reasons.append(f"可发布性过低({r_pub:.0f})")
             if risk.overall in ("medium", "high"):
                 reasons.append(f"风险={risk.overall}")
             if r.stars < 100:
                 reasons.append("低star")
             if not r.license:
                 reasons.append("许可证不明")
-            action = "人工审核后再决定" if r.score >= 40 else "不建议采用"
+            action = "人工审核后再决定" if r_pub >= PUB_C_THRESHOLD else "不建议采用"
             lines.append(
-                f"| {i} | [{r.full_name}]({r.url}) | {r.score:.0f} | {r.stars} | {'; '.join(reasons) if reasons else '评分未达标'} | {action} |"
+                f"| {i} | [{r.full_name}]({r.url}) | {r_pub:.0f} | {r.score:.0f} | {r.stars} | {'; '.join(reasons) if reasons else '可发布性未达标'} | {action} |"
             )
         lines.append("")
     else:
@@ -1015,8 +1020,8 @@ def generate_review_queue(
     # ── Category 1A: Publish Review (near publishable) ────────────────
     lines.append("## 一-A、可发布审核（publish_review）— 接近可发布，人工微调即可")
     lines.append("")
-    publishable_repos = [r for r in top5 if getattr(r, 'publishability_score', 0) >= 50]
-    needs_research = [r for r in top5 if getattr(r, 'publishability_score', 0) < 50]
+    publishable_repos = [r for r in top5 if getattr(r, 'publishability_score', 0) >= PUB_C_THRESHOLD]
+    needs_research = [r for r in top5 if getattr(r, 'publishability_score', 0) < PUB_C_THRESHOLD]
 
     if publishable_repos:
         lines.append("| # | 项目 | 可发布性 | 选题分 | 内容潜力 | 受众适配 | 建议操作 | 需检查什么 |")

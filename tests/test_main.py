@@ -79,8 +79,12 @@ class TestCLIArgs:
 # ── Helpers for Phase 13 tests ──────────────────────────────────────────
 
 def _make_scored_repo(full_name="test/repo", score=75.0, risk_level="none",
-                      content_type="runnable_project", pool="top5"):
+                      content_type="runnable_project", pool="top5",
+                      publishability_score=None):
     from src.scorer import ScoredRepo
+
+    if publishability_score is None:
+        publishability_score = score  # backward compat: score-is-pub for existing tests
 
     return ScoredRepo(
         full_name=full_name,
@@ -100,6 +104,7 @@ def _make_scored_repo(full_name="test/repo", score=75.0, risk_level="none",
         risk_level=risk_level,
         content_type=content_type,
         pool=pool,
+        publishability_score=publishability_score,
     )
 
 

@@ -180,3 +180,27 @@ class TestPublishFlowCommand:
                 break
 
         assert "publish-flow" in subcommands
+
+
+# ── Phase 20: Publishability Threshold ──────────────────────────────────
+
+class TestPublishabilityThresholdConstant:
+    """Verify Phase 20 publishability_score threshold constants are correct."""
+
+    def test_publishability_threshold_is_40(self):
+        """PUBLISHABILITY_THRESHOLD should be 40."""
+        from src.publish_pack import PUBLISHABILITY_THRESHOLD
+        assert PUBLISHABILITY_THRESHOLD == 40, \
+            f"PUBLISHABILITY_THRESHOLD expected 40, got {PUBLISHABILITY_THRESHOLD}"
+
+    def test_content_pack_quality_threshold_is_70(self):
+        """CONTENT_PACK_QUALITY_THRESHOLD should be 70 (unchanged semantics)."""
+        from src.publish_pack import CONTENT_PACK_QUALITY_THRESHOLD
+        assert CONTENT_PACK_QUALITY_THRESHOLD == 70, \
+            f"CONTENT_PACK_QUALITY_THRESHOLD expected 70, got {CONTENT_PACK_QUALITY_THRESHOLD}"
+
+    def test_old_qualified_threshold_removed(self):
+        """QUALIFIED_THRESHOLD (old score-based) should no longer exist."""
+        import src.publish_pack as pp
+        assert not hasattr(pp, "QUALIFIED_THRESHOLD"), \
+            "QUALIFIED_THRESHOLD should be removed, replaced by PUBLISHABILITY_THRESHOLD"
