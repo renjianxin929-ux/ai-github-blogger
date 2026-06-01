@@ -34,6 +34,7 @@ from .analyzer import FDEAnalysis, ai_fde_analyze
 from .benchmark import cmd_benchmark
 from .publish_pack import build_publish_pack
 from .publish_review import review_pack, approve_pack, reject_pack, revise_pack
+from .dashboard import cmd_dashboard
 from .quality_gate import cmd_quality_gate
 from .config import (
     MAX_REPOS_TO_ANALYZE,
@@ -137,6 +138,9 @@ def build_parser() -> argparse.ArgumentParser:
     pubhist_parser = subparsers.add_parser("publish-history", help="Show publish history")
     pubhist_parser.add_argument("repo", nargs="?", default=None,
                                  help="Filter by repo (owner/repo). If omitted, shows all.")
+
+    # dashboard (Phase 22)
+    subparsers.add_parser("dashboard", help="Daily dashboard: top candidates, publish status, health, next actions")
 
     # Default to "daily" if no subcommand specified
     parser.set_defaults(command="daily", no_llm=False)
@@ -2047,6 +2051,8 @@ def main() -> int:
         return cmd_mark_published(args.pack_dir, args.platform, args.url, args.note, args.force)
     elif args.command == "publish-history":
         return cmd_publish_history(args.repo)
+    elif args.command == "dashboard":
+        return cmd_dashboard()
     elif args.command == "content":
         if not args.repo:
             parser.error("content command requires a repo argument (owner/repo)")
