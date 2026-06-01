@@ -882,6 +882,17 @@ def generate_review_queue(
     #
     # raw score is preserved for reference only ("选题参考分").
 
+    # Phase 21: check for already-published repos
+    from .publish_history import is_published
+
+    published_repos = [r for r in top5 if is_published(r.full_name)] if top5 else []
+    if published_repos:
+        lines.append("## ⚠️ 已发布项目（跳过推荐）")
+        lines.append("")
+        for r in published_repos:
+            lines.append(f"- **{r.full_name}** — 已发布，不进入今日推荐候选")
+        lines.append("")
+
     PUB_A_THRESHOLD = 75   # publishability_score >= this → A. 今日最推荐
     PUB_B_THRESHOLD = 60   # publishability_score >= this → B. 可观察候选
     PUB_C_THRESHOLD = 40   # publishability_score >= this → C. 需要人工审核; below → 不推荐

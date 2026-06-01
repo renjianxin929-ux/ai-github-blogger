@@ -212,6 +212,8 @@ def _find_best_from_review_queue() -> str | None:
     best_raw = 0
     best_stars = 0
 
+    from .publish_history import is_published
+
     for item in top5:
         pub_score = item.get("publishability_score", 0) if isinstance(item, dict) else getattr(item, "publishability_score", 0)
         raw_score = item.get("score", 0) if isinstance(item, dict) else getattr(item, "score", 0)
@@ -219,6 +221,9 @@ def _find_best_from_review_queue() -> str | None:
         name = item.get("full_name", "") if isinstance(item, dict) else getattr(item, "full_name", "")
 
         if pub_score < PUBLISHABILITY_THRESHOLD:
+            continue
+
+        if is_published(name):
             continue
 
         # Multi-key sort: publishability_score > score > stars

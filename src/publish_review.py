@@ -7,7 +7,8 @@ Provides 4 commands on top of Phase 17 publish packs:
   - revise-pack: revision notes only (no auto-modification)
 
 State machine (one-way):
-  review → approved (terminal) — cannot reject/revise after
+  review → approved → published (terminal for approve/reject/revise,
+                              but allows additional platform marks)
   review → rejected (terminal) — cannot approve after
   review → revision_notes (repeatable)
 """
@@ -222,6 +223,11 @@ def approve_pack(pack_dir: str) -> dict:
         return {"status": "blocked", "reason": "该包已拒绝，不可再批准",
                 "human_review_status": "rejected"}
 
+    # State gate 3: already published
+    if current_status == "published":
+        return {"status": "blocked", "reason": "该包已发布，不可再批准",
+                "human_review_status": "published"}
+
     # Quality gate: run review
     report = review_pack(str(pack))
     if report.verdict != "ready" or report.blocking_issues:
@@ -280,6 +286,11 @@ def reject_pack(pack_dir: str, reason: str) -> dict:
         return {"status": "blocked", "reason": "该包已批准，不可再拒绝",
                 "human_review_status": "approved"}
 
+    # State gate: already published
+    if current_status == "published":
+        return {"status": "blocked", "reason": "该包已发布，不可再拒绝",
+                "human_review_status": "published"}
+
     # Reject
     now = datetime.now(timezone.utc).isoformat()
     _update_pack_manifest(pack, {
@@ -322,6 +333,11 @@ def revise_pack(pack_dir: str) -> dict:
     if current_status == "approved":
         return {"status": "blocked", "reason": "该包已批准，不可再改稿",
                 "human_review_status": "approved"}
+
+    # State gate: already published
+    if current_status == "published":
+        return {"status": "blocked", "reason": "该包已发布，不可再改稿",
+                "human_review_status": "published"}
 
     # Run review to gather issues
     report = review_pack(str(pack))

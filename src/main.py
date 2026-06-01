@@ -123,6 +123,21 @@ def build_parser() -> argparse.ArgumentParser:
     flow_parser.add_argument("repo", nargs="?", default=None,
                               help="Repository full name (owner/repo). If omitted, auto-detects best candidate.")
 
+    # mark-published (Phase 21)
+    mark_pub_parser = subparsers.add_parser("mark-published", help="Mark an approved pack as published to a platform")
+    mark_pub_parser.add_argument("pack_dir", help="Path to publish pack directory")
+    mark_pub_parser.add_argument("--platform", required=True,
+                                  help="Platform: wechat/xiaohongshu/douyin/videohao/geo")
+    mark_pub_parser.add_argument("--url", default=None, help="Published URL (optional)")
+    mark_pub_parser.add_argument("--note", default=None, help="Publish note (optional)")
+    mark_pub_parser.add_argument("--force", action="store_true",
+                                  help="Force update url/note for already-recorded platform")
+
+    # publish-history (Phase 21)
+    pubhist_parser = subparsers.add_parser("publish-history", help="Show publish history")
+    pubhist_parser.add_argument("repo", nargs="?", default=None,
+                                 help="Filter by repo (owner/repo). If omitted, shows all.")
+
     # Default to "daily" if no subcommand specified
     parser.set_defaults(command="daily", no_llm=False)
 
@@ -1059,6 +1074,17 @@ def cmd_daily_workflow() -> int:
     else:
         top5_sorted = []
 
+    # Phase 21: flag published repos
+    from .publish_history import is_published as _is_published
+    published_names = set()
+    unpublished_sorted = []
+    for r in top5_sorted:
+        name = r.get("full_name", "")
+        if _is_published(name):
+            published_names.add(name)
+        else:
+            unpublished_sorted.append(r)
+
     best = top5_sorted[0] if top5_sorted else None
     best_pub = best.get("publishability_score", 0) if best else 0
     best_raw = best.get("score", 0) if best else 0
@@ -1090,6 +1116,9 @@ def cmd_daily_workflow() -> int:
             print(f"  ⏱️ 预计人工耗时: ~{est_minutes} 分钟（生成+审核+发布）")
         else:
             print(f"  今日无项目达到可发布门槛（publishability_score ≥ {PUB_C}）")
+        # Phase 21: flag published repos
+        if published_names:
+            print(f"  📌 已发布跳过: {', '.join(sorted(published_names))}")
     else:
         print("  今日无 Top5 数据。运行 python run.py daily --no-llm 生成。")
     print()
@@ -1637,6 +1666,120 @@ def cmd_publish_flow(repo: str | None = None) -> int:
     return 0
 
 
+def cmd_mark_published(pack_dir: str, platform: str, url: str | None = None,
+                       note: str | None = None, force: bool = False) -> int:
+    """Phase 21: Mark an approved publish pack as published to a platform.
+
+    Returns:
+        0 on success, 1 on blocked/failure.
+    """
+    from .publish_history import mark_published
+
+    print()
+    print("=" * 64)
+    print("  Mark Published (Phase 21)")
+    print("=" * 64)
+    print()
+
+    pack = Path(pack_dir)
+    if not pack.exists():
+        print(f"  ❌ 发布包目录不存在: {pack_dir}")
+        print()
+        return 1
+
+    result = mark_published(pack_dir, platform=platform, url=url, note=note, force=force)
+
+    if result["status"] == "ok":
+        action = result.get("action", "created")
+        if action == "updated":
+            print(f"  ✅ 已更新发布记录")
+        else:
+            print(f"  ✅ 已记录发布")
+        print(f"  项目: {result['repo']}")
+        print(f"  平台: {result['platform']}")
+        if url:
+            print(f"  URL: {url}")
+        if note:
+            print(f"  备注: {note}")
+        print()
+        print("  📋 提示: 使用 python run.py publish-history 查看发布历史")
+    elif result["status"] == "duplicate":
+        print(f"  ⚠️ 该平台已记录")
+        print(f"  项目: {result['repo']}")
+        print(f"  平台: {result['platform']}")
+        existing = result.get("existing", {})
+        if existing:
+            print(f"  已有记录: {existing.get('published_at', 'unknown')}")
+        print()
+        print("  使用 --force 覆盖 url/note:")
+        print(f"    python run.py mark-published {pack_dir} --platform {platform} --force")
+    else:
+        print(f"  ❌ 记录发布失败")
+        print(f"  原因: {result.get('reason', 'unknown')}")
+    print()
+    print("=" * 64)
+    return 0 if result["status"] in ("ok", "duplicate") else 1
+
+
+def cmd_publish_history(repo: str | None = None) -> int:
+    """Phase 21: Show publish history.
+
+    Returns:
+        0 on success.
+    """
+    from .publish_history import get_publish_history
+
+    print()
+    print("=" * 64)
+    print("  Publish History (Phase 21)")
+    print("=" * 64)
+    print()
+
+    history = get_publish_history(repo)
+
+    if repo:
+        # Single repo view
+        entries = history if isinstance(history, list) else []
+        if not entries:
+            print(f"  {repo} — 无发布记录")
+        else:
+            print(f"  {repo}:")
+            print()
+            for i, entry in enumerate(entries, 1):
+                print(f"  [{i}] {entry['platform']}")
+                print(f"      时间: {entry.get('published_at', 'N/A')[:19]}")
+                if entry.get('url'):
+                    print(f"      URL: {entry['url']}")
+                if entry.get('note'):
+                    print(f"      备注: {entry['note']}")
+                print(f"      可发布性: {entry.get('publishability_score', 'N/A')}")
+                print(f"      选题分: {entry.get('score', 'N/A')}")
+                print(f"      模式: {entry.get('source_mode', 'N/A')}")
+                print(f"      包路径: {entry.get('pack_dir', 'N/A')}")
+                print()
+    else:
+        # All repos view
+        if not history:
+            print("  暂无发布记录。")
+            print()
+            print("  在 approve-pack 之后使用 mark-published 记录发布：")
+            print("    python run.py mark-published <pack_dir> --platform wechat")
+        else:
+            total = sum(len(v) for v in history.values())
+            print(f"  共 {len(history)} 个项目，{total} 条发布记录：")
+            print()
+            for repo_name, entries in sorted(history.items()):
+                platforms = [e["platform"] for e in entries]
+                latest = max(e.get("published_at", "") for e in entries)
+                print(f"  📌 {repo_name}")
+                print(f"     平台: {', '.join(platforms)}")
+                print(f"     最近发布: {latest[:19] if latest else 'N/A'}")
+                print()
+
+    print("=" * 64)
+    return 0
+
+
 def cmd_llm_doctor() -> int:
     """Phase 15: Diagnose LLM provider connectivity.
 
@@ -1900,6 +2043,10 @@ def main() -> int:
         return cmd_revise_pack(args.pack_dir)
     elif args.command == "publish-flow":
         return cmd_publish_flow(args.repo)
+    elif args.command == "mark-published":
+        return cmd_mark_published(args.pack_dir, args.platform, args.url, args.note, args.force)
+    elif args.command == "publish-history":
+        return cmd_publish_history(args.repo)
     elif args.command == "content":
         if not args.repo:
             parser.error("content command requires a repo argument (owner/repo)")
