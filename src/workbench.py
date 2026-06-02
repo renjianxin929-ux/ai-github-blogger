@@ -1,13 +1,14 @@
-"""Daily Operator Workbench — Phase 23.
+"""Daily Operator Workbench — Phase 23 (+ Phase 25 insights integration).
 
 A read-only, guidance-only daily entry point for human operators.
-Reads existing pipeline data (top5, publish_history, quality gate) and outputs:
+Reads existing pipeline data (top5, publish_history, quality gate, insights) and outputs:
   - Today's decision summary
   - Best candidate with reasoning
   - Platform suggestions
   - Risk warnings
   - Next-step CLI commands
   - Human review checklist
+  - Post-publish review suggestions (powered by insights engine)
 
 Zero side effects — no LLM calls, no content generation, no file writes
 (except optional --output for saving the report).
@@ -474,69 +475,17 @@ def generate_workbench(date_str: str | None = None,
 
     lines.append("")
 
-    # ── Section 8: Post-Publish Review Suggestions (Phase 24) ──
+    # ── Section 8: Post-Publish Review Suggestions (Phase 25 — insights-powered) ──
     lines.append(f"── 8. 复盘建议 ──")
     lines.append("")
 
     try:
-        from .metrics import summarize_metrics as _summarize_metrics
-        ms = _summarize_metrics()
+        from .insights import insights_summary_for_workbench
+        insight_lines = insights_summary_for_workbench()
+        lines.extend(insight_lines)
     except Exception:
-        ms = {"entry_count": 0}
-
-    if ms.get("entry_count", 0) == 0:
-        lines.append("  暂无发布后数据，请先使用 record-metrics 录入。")
-        lines.append("    python run.py record-metrics <owner/repo> --platform wechat --views 100 --likes 5")
-    else:
-        # Content type analysis
-        per_type = ms.get("per_type", {})
-        if per_type:
-            # Sort by avg_engagement desc
-            sorted_types = sorted(per_type.items(),
-                                  key=lambda t: t[1].get("avg_engagement", 0),
-                                  reverse=True)
-            best_type = sorted_types[0]
-            worst_type = sorted_types[-1] if len(sorted_types) > 1 else None
-
-            lines.append(f"  基于 {ms['entry_count']} 条表现数据:")
-            lines.append(f"    📈 高互动方向: {best_type[0]} "
-                        f"(平均互动率 {best_type[1].get('avg_engagement', 0):.2%}, "
-                        f"{best_type[1]['count']} 条记录)")
-
-            if worst_type and worst_type[0] != best_type[0]:
-                lines.append(f"    📉 低互动方向: {worst_type[0]} "
-                            f"(平均互动率 {worst_type[1].get('avg_engagement', 0):.2%})")
-
-        # Platform analysis
-        per_platform = ms.get("per_platform", {})
-        if per_platform:
-            sorted_plat = sorted(per_platform.items(),
-                                 key=lambda t: t[1].get("total_views", 0),
-                                 reverse=True)
-            best_plat = sorted_plat[0]
-            plat_labels = {"wechat": "公众号", "xiaohongshu": "小红书",
-                          "douyin": "抖音", "videohao": "视频号", "geo": "GEO"}
-            bp_label = plat_labels.get(best_plat[0], best_plat[0])
-            lines.append(f"    📊 最高浏览平台: {bp_label} "
-                        f"(总浏览 {best_plat[1].get('total_views', 0):,})")
-
-        # Actionable advice
-        lines.append("")
-        lines.append("  💡 今日选题建议:")
-        if best and best["tier"] in ("recommended", "watch"):
-            best_ctype = best.get("content_type", "runnable_project")
-            if per_type and best_ctype in per_type:
-                ctype_eng = per_type[best_ctype].get("avg_engagement", 0)
-                if ctype_eng >= 0.05:
-                    lines.append(f"    ✅ {best['full_name']} 的类型({best_ctype})"
-                                f"历史互动率 {ctype_eng:.2%}，值得继续做")
-                else:
-                    lines.append(f"    ⚠️ {best['full_name']} 的类型({best_ctype})"
-                                f"历史互动率偏低 ({ctype_eng:.2%})，建议优化标题/封面")
-            else:
-                lines.append(f"    → {best_ctype} 类型暂无历史数据，此次为探索发布")
-        else:
-            lines.append("    → 今日无强推荐，可复盘历史高互动方向后手动选题")
+        lines.append("  复盘数据暂不可用。")
+        lines.append("  依据: insights 模块加载失败")
 
     lines.append("")
     lines.append(sep)

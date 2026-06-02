@@ -39,6 +39,7 @@ from .publish_pack import build_publish_pack
 from .publish_review import review_pack, approve_pack, reject_pack, revise_pack
 from .dashboard import cmd_dashboard
 from .workbench import cmd_workbench
+from .insights import cmd_insights
 from .metrics import record_metrics, get_metrics_history, summarize_metrics
 from .quality_gate import cmd_quality_gate
 from .config import (
@@ -168,6 +169,11 @@ def build_parser() -> argparse.ArgumentParser:
     mh_parser = subparsers.add_parser("metrics-history", help="Show post-publish metrics history")
     mh_parser.add_argument("repo", nargs="?", default=None,
                            help="Filter by repo (owner/repo). If omitted, shows summary.")
+
+    # insights (Phase 25)
+    insights_parser = subparsers.add_parser("insights", help="Post-publish insights: evidence-backed content strategy recommendations")
+    insights_parser.add_argument("repo", nargs="?", default=None,
+                                  help="Filter by repo (owner/repo). If omitted, shows all.")
 
     # Default to "daily" if no subcommand specified
     parser.set_defaults(command="daily", no_llm=False)
@@ -1918,6 +1924,11 @@ def _cmd_metrics_history(repo: str | None = None) -> int:
     return 0
 
 
+def _cmd_insights(repo: str | None = None) -> int:
+    """Phase 25: Post-publish insights with evidence-backed recommendations."""
+    return cmd_insights(repo=repo)
+
+
 def cmd_llm_doctor() -> int:
     """Phase 15: Diagnose LLM provider connectivity.
 
@@ -2195,6 +2206,8 @@ def main() -> int:
                                    args.leads, args.note)
     elif args.command == "metrics-history":
         return _cmd_metrics_history(args.repo)
+    elif args.command == "insights":
+        return _cmd_insights(args.repo)
     elif args.command == "content":
         if not args.repo:
             parser.error("content command requires a repo argument (owner/repo)")

@@ -182,6 +182,25 @@ class TestPublishFlowCommand:
         assert "publish-flow" in subcommands
 
 
+# ── Phase 25: Insights Command Registration ─────────────────────────────────
+
+class TestInsightsCommand:
+    """Verify Phase 25 insights subcommand is registered."""
+
+    def test_insights_command_exists(self):
+        """insights should be a registered subcommand."""
+        from src.main import build_parser
+
+        parser = build_parser()
+        subcommands = []
+        for action in parser._actions:
+            if getattr(action, 'choices', None) is not None:
+                subcommands = list(action.choices.keys())
+                break
+
+        assert "insights" in subcommands
+
+
 # ── Phase 20: Publishability Threshold ──────────────────────────────────
 
 class TestPublishabilityThresholdConstant:

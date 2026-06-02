@@ -504,6 +504,20 @@ def generate_dashboard(date_str: str | None = None) -> str:
 
     lines.append("")
 
+    # ── 8. Post-Publish Insights Trend (Phase 25) ──
+    lines.append(f"── 8. 历史表现趋势摘要 ──")
+    lines.append("")
+
+    try:
+        from .insights import insights_trend_for_dashboard
+        trend_lines = insights_trend_for_dashboard()
+        lines.extend(trend_lines)
+    except Exception:
+        lines.append("  趋势数据暂不可用。")
+        lines.append("  依据: insights 模块加载失败")
+
+    lines.append("")
+
     lines.append(sep)
     return "\n".join(lines)
 
