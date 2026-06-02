@@ -13,6 +13,9 @@ Usage:
     python -m src.main quality-gate   # Run quality gate evaluation
     python -m src.main publish-pack   # Build publish handoff pack
     python -m src.main publish-pack <owner/repo>  # Publish pack for specific repo
+    python -m src.main workbench      # Daily operator workbench (read-only guide)
+    python -m src.main workbench --date 2026-06-01
+    python -m src.main workbench --repo owner/repo
 """
 import json
 import sys
@@ -35,6 +38,7 @@ from .benchmark import cmd_benchmark
 from .publish_pack import build_publish_pack
 from .publish_review import review_pack, approve_pack, reject_pack, revise_pack
 from .dashboard import cmd_dashboard
+from .workbench import cmd_workbench
 from .quality_gate import cmd_quality_gate
 from .config import (
     MAX_REPOS_TO_ANALYZE,
@@ -141,6 +145,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     # dashboard (Phase 22)
     subparsers.add_parser("dashboard", help="Daily dashboard: top candidates, publish status, health, next actions")
+
+    # workbench (Phase 23)
+    wb_parser = subparsers.add_parser("workbench", help="Daily operator workbench: best candidate, next commands, human checklist")
+    wb_parser.add_argument("--date", default=None, help="Target date (YYYY-MM-DD), defaults to today")
+    wb_parser.add_argument("--repo", default=None, help="Filter to specific repo (owner/repo)")
 
     # Default to "daily" if no subcommand specified
     parser.set_defaults(command="daily", no_llm=False)
@@ -2053,6 +2062,8 @@ def main() -> int:
         return cmd_publish_history(args.repo)
     elif args.command == "dashboard":
         return cmd_dashboard()
+    elif args.command == "workbench":
+        return cmd_workbench(date_str=args.date, repo_filter=args.repo)
     elif args.command == "content":
         if not args.repo:
             parser.error("content command requires a repo argument (owner/repo)")
