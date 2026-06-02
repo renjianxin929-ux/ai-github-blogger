@@ -464,6 +464,46 @@ def generate_dashboard(date_str: str | None = None) -> str:
     lines.append(f"  日报天数:   {report_count} 天")
     lines.append("")
 
+    # ── 7. Post-Publish Metrics Summary (Phase 24) ──
+    lines.append(f"── 7. 发布后表现摘要 ──")
+    lines.append("")
+
+    try:
+        from .metrics import summarize_metrics
+        ms = summarize_metrics()
+    except Exception:
+        ms = {"entry_count": 0}
+
+    if ms.get("entry_count", 0) == 0:
+        lines.append("  暂无发布后表现数据。")
+        lines.append("  请使用 record-metrics 录入:")
+        lines.append("    python run.py record-metrics <owner/repo> --platform wechat --views 100 --likes 5")
+    else:
+        lines.append(f"  已录入项目:   {ms['repo_count']} 个")
+        lines.append(f"  已录入平台:   {ms['platform_count']} 个")
+        lines.append(f"  总记录数:     {ms['entry_count']} 条")
+
+        if ms.get("best_views"):
+            bv = ms["best_views"]
+            lines.append(f"  最高浏览:     {bv['views']:,} ({bv['repo']} → {bv['platform']})")
+        if ms.get("best_engagement"):
+            be = ms["best_engagement"]
+            lines.append(f"  最高互动率:   {be['rate']:.2%} ({be['repo']} → {be['platform']})")
+        if ms.get("best_lead"):
+            bl = ms["best_lead"]
+            lines.append(f"  最高线索率:   {bl['rate']:.2%} ({bl['repo']} → {bl['platform']})")
+
+        if ms.get("recent_entries"):
+            lines.append("")
+            lines.append("  最近 3 条:")
+            for i, e in enumerate(ms["recent_entries"][:3], 1):
+                lines.append(f"    {i}. {e['_repo']} → {e['platform']} "
+                            f"(浏览 {e.get('views', 0):,}, "
+                            f"互动率 {e.get('engagement_rate', 0):.2%}, "
+                            f"线索率 {e.get('lead_rate', 0):.2%})")
+
+    lines.append("")
+
     lines.append(sep)
     return "\n".join(lines)
 

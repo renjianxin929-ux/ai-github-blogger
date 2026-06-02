@@ -9,6 +9,7 @@ data/reports/
 data/content_packs/
 data/publish_packs/
 data/state/publish_history.json
+data/state/metrics_history.json
 __pycache__/
 .pytest_cache/
 *.pyc

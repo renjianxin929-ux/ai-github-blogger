@@ -39,6 +39,7 @@ from .publish_pack import build_publish_pack
 from .publish_review import review_pack, approve_pack, reject_pack, revise_pack
 from .dashboard import cmd_dashboard
 from .workbench import cmd_workbench
+from .metrics import record_metrics, get_metrics_history, summarize_metrics
 from .quality_gate import cmd_quality_gate
 from .config import (
     MAX_REPOS_TO_ANALYZE,
@@ -150,6 +151,23 @@ def build_parser() -> argparse.ArgumentParser:
     wb_parser = subparsers.add_parser("workbench", help="Daily operator workbench: best candidate, next commands, human checklist")
     wb_parser.add_argument("--date", default=None, help="Target date (YYYY-MM-DD), defaults to today")
     wb_parser.add_argument("--repo", default=None, help="Filter to specific repo (owner/repo)")
+
+    # record-metrics (Phase 24)
+    rm_parser = subparsers.add_parser("record-metrics", help="Record post-publish performance metrics")
+    rm_parser.add_argument("repo", help="Repository full name (owner/repo)")
+    rm_parser.add_argument("--platform", required=True,
+                           help="Platform: wechat/xiaohongshu/douyin/videohao/geo")
+    rm_parser.add_argument("--views", type=int, default=0, help="View count")
+    rm_parser.add_argument("--likes", type=int, default=0, help="Like count")
+    rm_parser.add_argument("--favorites", type=int, default=0, help="Favorite/bookmark count")
+    rm_parser.add_argument("--comments", type=int, default=0, help="Comment count")
+    rm_parser.add_argument("--leads", type=int, default=0, help="Lead/conversion count")
+    rm_parser.add_argument("--note", default=None, help="Optional note")
+
+    # metrics-history (Phase 24)
+    mh_parser = subparsers.add_parser("metrics-history", help="Show post-publish metrics history")
+    mh_parser.add_argument("repo", nargs="?", default=None,
+                           help="Filter by repo (owner/repo). If omitted, shows summary.")
 
     # Default to "daily" if no subcommand specified
     parser.set_defaults(command="daily", no_llm=False)
@@ -1793,6 +1811,113 @@ def cmd_publish_history(repo: str | None = None) -> int:
     return 0
 
 
+def _cmd_record_metrics(repo: str, platform: str, views: int, likes: int,
+                        favorites: int, comments: int, leads: int,
+                        note: str | None) -> int:
+    """Phase 24: Record post-publish performance metrics."""
+    print()
+    print("=" * 64)
+    print("  Record Metrics (Phase 24)")
+    print("=" * 64)
+    print()
+
+    result = record_metrics(repo, platform=platform, views=views, likes=likes,
+                            favorites=favorites, comments=comments, leads=leads,
+                            note=note)
+
+    if result["status"] == "ok":
+        print(f"  ✅ 已记录指标")
+        print(f"  项目:     {result['repo']}")
+        print(f"  平台:     {result['platform']}")
+        print(f"  互动率:   {result['engagement_rate']:.2%}")
+        print(f"  线索率:   {result['lead_rate']:.2%}")
+        print()
+        print("  📋 提示: 使用 python run.py metrics-history 查看历史")
+    else:
+        print(f"  ❌ 记录失败")
+        print(f"  原因: {result.get('reason', 'unknown')}")
+    print()
+    print("=" * 64)
+    return 0 if result["status"] == "ok" else 1
+
+
+def _cmd_metrics_history(repo: str | None = None) -> int:
+    """Phase 24: Show post-publish metrics history."""
+    print()
+    print("=" * 64)
+    print("  Metrics History (Phase 24)")
+    print("=" * 64)
+    print()
+
+    summary = summarize_metrics(repo)
+
+    if repo:
+        print(f"  项目: {repo}")
+        print()
+        entries = get_metrics_history(repo)
+        if not entries:
+            print(f"  暂无 {repo} 的表现数据。")
+            print()
+            print("  录入数据:")
+            print(f"    python run.py record-metrics {repo} --platform wechat --views 100 --likes 5")
+        else:
+            for i, e in enumerate(entries, 1):
+                print(f"  [{i}] {e['platform']}")
+                print(f"      时间:     {e.get('recorded_at', 'N/A')[:19]}")
+                print(f"      浏览:     {e.get('views', 0):,}")
+                print(f"      点赞:     {e.get('likes', 0):,}")
+                print(f"      收藏:     {e.get('favorites', 0):,}")
+                print(f"      评论:     {e.get('comments', 0):,}")
+                print(f"      线索:     {e.get('leads', 0):,}")
+                print(f"      互动率:   {e.get('engagement_rate', 0):.2%}")
+                print(f"      线索率:   {e.get('lead_rate', 0):.2%}")
+                if e.get('note'):
+                    print(f"      备注:     {e['note']}")
+                print()
+    else:
+        if summary["entry_count"] == 0:
+            print("  暂无任何表现数据。")
+            print()
+            print("  录入数据:")
+            print("    python run.py record-metrics <owner/repo> --platform wechat --views 100 --likes 5")
+        else:
+            print(f"  项目数:     {summary['repo_count']} 个")
+            print(f"  记录数:     {summary['entry_count']} 条")
+            print(f"  平台数:     {summary['platform_count']} 个")
+            print()
+
+            if summary["best_views"]:
+                bv = summary["best_views"]
+                print(f"  最高浏览:   {bv['views']:,} ({bv['repo']} → {bv['platform']})")
+            if summary["best_engagement"]:
+                be = summary["best_engagement"]
+                print(f"  最高互动率: {be['rate']:.2%} ({be['repo']} → {be['platform']})")
+            if summary["best_lead"]:
+                bl = summary["best_lead"]
+                print(f"  最高线索率: {bl['rate']:.2%} ({bl['repo']} → {bl['platform']})")
+            print()
+
+            # Per platform
+            if summary["per_platform"]:
+                print("  各平台数据:")
+                for p, stats in sorted(summary["per_platform"].items()):
+                    print(f"    {p}: {stats['count']} 条, 浏览 {stats['total_views']:,}, "
+                          f"点赞 {stats['total_likes']:,}, 评论 {stats['total_comments']:,}, "
+                          f"线索 {stats['total_leads']:,}")
+
+            # Recent entries
+            if summary["recent_entries"]:
+                print()
+                print("  最近 3 条:")
+                for i, e in enumerate(summary["recent_entries"][:3], 1):
+                    print(f"    {i}. {e['_repo']} → {e['platform']} "
+                          f"(浏览 {e.get('views', 0):,}, 互动率 {e.get('engagement_rate', 0):.2%})")
+
+    print()
+    print("=" * 64)
+    return 0
+
+
 def cmd_llm_doctor() -> int:
     """Phase 15: Diagnose LLM provider connectivity.
 
@@ -2064,6 +2189,12 @@ def main() -> int:
         return cmd_dashboard()
     elif args.command == "workbench":
         return cmd_workbench(date_str=args.date, repo_filter=args.repo)
+    elif args.command == "record-metrics":
+        return _cmd_record_metrics(args.repo, args.platform, args.views,
+                                   args.likes, args.favorites, args.comments,
+                                   args.leads, args.note)
+    elif args.command == "metrics-history":
+        return _cmd_metrics_history(args.repo)
     elif args.command == "content":
         if not args.repo:
             parser.error("content command requires a repo argument (owner/repo)")
