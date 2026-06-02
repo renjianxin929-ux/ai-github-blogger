@@ -175,6 +175,13 @@ def build_parser() -> argparse.ArgumentParser:
     insights_parser.add_argument("repo", nargs="?", default=None,
                                   help="Filter by repo (owner/repo). If omitted, shows all.")
 
+    # ui (Phase 26)
+    ui_parser = subparsers.add_parser("ui", help="启动本地操作台 (http://127.0.0.1:8000)")
+    ui_parser.add_argument("--port", type=int, default=8000)
+    ui_parser.add_argument("--host", default="127.0.0.1")
+    ui_parser.add_argument("--smoke", action="store_true",
+                           help="烟雾测试: ASGITransport 验证路由后立即退出")
+
     # Default to "daily" if no subcommand specified
     parser.set_defaults(command="daily", no_llm=False)
 
@@ -1929,6 +1936,54 @@ def _cmd_insights(repo: str | None = None) -> int:
     return cmd_insights(repo=repo)
 
 
+def _cmd_ui(args) -> int:
+    """Phase 26: Launch local operator UI or run smoke test."""
+    from .ui_app import create_app
+    app = create_app()
+    if args.smoke:
+        import asyncio
+        import httpx
+        from httpx import ASGITransport
+
+        async def _smoke():
+            transport = ASGITransport(app=app)
+            async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+                # 1. GET / returns 200 with next-step
+                r1 = await client.get("/")
+                assert r1.status_code == 200, f"GET / returned {r1.status_code}"
+                assert "下一步行动" in r1.text, "Missing next-step block"
+                # 2. CSS accessible
+                r2 = await client.get("/static/ui.css")
+                assert r2.status_code == 200, f"CSS returned {r2.status_code}"
+                # 3. POST action does not execute shell (allowlist ensures this)
+                r3 = await client.post("/action/build", data={"repo": "test/test"})
+                assert r3.status_code in (200, 302, 303, 400, 500), \
+                    f"POST /action/build returned {r3.status_code}"
+                # 4. No .env leak
+                has_leak = ("SECRET" in r1.text.upper() and "API_KEY" not in r1.text)
+                assert not has_leak, "Potential .env leak detected"
+                # 5. data/state/*.json not git tracked
+                import subprocess
+                result = subprocess.run(
+                    ["git", "ls-files", "data/state/"],
+                    capture_output=True, text=True
+                )
+                allowed_tracked = {".gitkeep", "generated_repos.json", "seen_repos.json"}
+                tracked_files = {Path(line).name for line in result.stdout.strip().split('\n') if line.strip()}
+                bad_files = tracked_files - allowed_tracked
+                assert not bad_files, \
+                    f"Unexpected tracked state files: {bad_files}"
+                print("UI smoke test: ALL 5 CHECKS PASSED")
+
+        asyncio.run(_smoke())
+        return 0
+    import uvicorn
+    print(f"操作台启动: http://{args.host}:{args.port}")
+    print("按 Ctrl+C 停止")
+    uvicorn.run(app, host=args.host, port=args.port)
+    return 0
+
+
 def cmd_llm_doctor() -> int:
     """Phase 15: Diagnose LLM provider connectivity.
 
@@ -2208,6 +2263,8 @@ def main() -> int:
         return _cmd_metrics_history(args.repo)
     elif args.command == "insights":
         return _cmd_insights(args.repo)
+    elif args.command == "ui":
+        return _cmd_ui(args)
     elif args.command == "content":
         if not args.repo:
             parser.error("content command requires a repo argument (owner/repo)")

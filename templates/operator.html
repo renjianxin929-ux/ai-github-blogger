@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI GitHub Blogger — 本地操作台</title>
+<link rel="stylesheet" href="/static/ui.css">
+</head>
+<body>
+
+<h1>AI GitHub Blogger 操作台</h1>
+<p style="color: var(--text-dim); font-size: 0.85rem; margin-bottom: 20px;">
+  本地人工确认式工作台 — 不自动发布到任何外部平台
+</p>
+
+{% if flash %}
+<div class="flash flash-{{ flash.level }}">{{ flash.message }}</div>
+{% endif %}
+
+<!-- ═════════════════════════════════════════════════════ §0 下一步行动 ══════ -->
+<section id="section-next-step" class="time-{{ state.time_period }}">
+  <h2>
+    &#x1f3af; 下一步行动
+    <span class="badge badge-info">{{ state.next_step.time_label }}</span>
+  </h2>
+  <div class="next-message">&#x1f449; {{ state.next_step.message }}</div>
+  {% if state.next_step.detail %}
+  <div class="next-detail">{{ state.next_step.detail }}</div>
+  {% endif %}
+  {% if state.next_step.deadline_countdown %}
+  <div class="deadline-countdown">{{ state.next_step.deadline_countdown }}</div>
+  {% endif %}
+</section>
+
+<!-- ═════════════════════════════════════════════════════ §1 环境状态 ══════ -->
+<section id="section-env" class="action-readonly">
+  <h2>
+    &#x00a7;1 环境状态
+    <span class="action-tag">&#x1f4cb; 只读</span>
+  </h2>
+  <div class="form-row">
+    <span>Doctor:</span>
+    {% if state.doctor.pass_count is defined %}
+    <span class="badge badge-pass">PASS ({{ state.doctor.pass_count }})</span>
+    {% else %}
+    <span class="badge badge-warn">N/A</span>
+    {% endif %}
+    <span>GitHub API:</span>
+    {% if state.doctor.github_ok %}
+    <span class="badge badge-pass">OK</span>
+    {% else %}
+    <span class="badge badge-warn">N/A</span>
+    {% endif %}
+    <span>LLM:</span>
+    {% if state.doctor.llm_ok %}
+    <span class="badge badge-pass">OK</span>
+    {% else %}
+    <span class="badge badge-warn">N/A</span>
+    {% endif %}
+    <span>API Key:</span>
+    <code>{{ state.doctor.api_key_masked }}</code>
+  </div>
+</section>
+
+<!-- ═════════════════════════════════════════════════════ §2 选题面板 ══════ -->
+<section id="section-topics" class="action-readonly">
+  <h2>
+    &#x00a7;2 选题面板
+    <span class="action-tag">&#x1f4cb; 只读</span>
+  </h2>
+  {% if state.candidates %}
+  <table>
+    <thead>
+      <tr><th>项目</th><th>评分</th><th>级别</th><th>描述</th></tr>
+    </thead>
+    <tbody>
+    {% for c in state.candidates[:10] %}
+      <tr>
+        <td><code>{{ c.repo }}</code></td>
+        <td>{{ c.score }}/100</td>
+        <td><span class="score-{{ c.grade | lower }}">{{ c.grade }}级</span></td>
+        <td style="font-size:0.82rem; color:var(--text-dim);">{{ c.desc }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color: var(--text-dim);">暂无候选项目。请先运行 <code>python run.py daily-workflow</code> 获取今日选题。</p>
+  {% endif %}
+</section>
+
+<!-- ═════════════════════════════════════════════════════ §3 内容生成 ══════ -->
+<section id="section-content" class="action-generate">
+  <h2>
+    &#x00a7;3 内容生成
+    <span class="action-tag">&#x1f4dd; 生成本地文件</span>
+  </h2>
+
+  <form method="post" action="/action/build">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="build-repo">GitHub Repo (owner/repo)</label>
+        <input id="build-repo" name="repo" type="text" placeholder="owner/repo" required
+               pattern="^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$"
+               style="width: 280px;">
+      </div>
+      <button type="submit" class="btn btn-primary">Build 内容包</button>
+    </div>
+  </form>
+  <p style="font-size:0.8rem; color:var(--text-dim); margin-top:6px;">
+    &#x26a0; 会生成 ~11 个文件到 <code>data/content_packs/</code> 目录
+  </p>
+
+  {% if state.active_pack %}
+  <div style="margin-top:12px; padding:10px; background:var(--bg); border-radius:var(--radius);">
+    <strong>当前包:</strong> <code>{{ state.active_pack.repo }}</code>
+    <span style="margin-left:8px;">状态:</span>
+    <span class="badge badge-{{ 'pass' if state.active_pack.status == 'approved' else 'warn' if state.active_pack.status == 'reviewed' else 'info' }}">
+      {{ state.active_pack.status }}
+    </span>
+    <span style="margin-left:8px; font-size:0.82rem; color:var(--text-dim);">
+      文件数: {{ state.active_pack.file_count }}
+    </span>
+  </div>
+  {% endif %}
+</section>
+
+<!-- ═════════════════════════════════════════════════════ §4 审核面板 ══════ -->
+<section id="section-review" class="action-review">
+  <h2>
+    &#x00a7;4 审核面板
+    <span class="action-tag">&#x2705; 改变审核状态</span>
+  </h2>
+
+  {% if state.active_pack and state.active_pack.status != 'published' %}
+  <div style="margin-bottom:10px;">
+    <strong>Pack:</strong> <code>{{ state.active_pack.pack_dir_name }}</code>
+    <span class="badge badge-info" style="margin-left:8px;">{{ state.active_pack.status }}</span>
+  </div>
+
+  <div class="form-row" style="gap:6px;">
+    <!-- Review -->
+    <form method="post" action="/action/review" style="display:inline;">
+      <input type="hidden" name="pack_dir" value="{{ state.active_pack.pack_dir }}">
+      <button type="submit" class="btn">&#x1f50d; Review</button>
+    </form>
+
+    <!-- Approve (with confirmation) -->
+    <details class="confirm">
+      <summary class="btn btn-confirm">&#x2705; Approve</summary>
+      <div class="confirm-box">
+        <p>&#x26a0; 确认批准此内容包？批准后可进入发布流程。</p>
+        <form method="post" action="/action/approve">
+          <input type="hidden" name="pack_dir" value="{{ state.active_pack.pack_dir }}">
+          <input type="hidden" name="confirmed" value="true">
+          <div class="confirm-actions">
+            <button type="submit" class="btn btn-confirm">确认 Approve</button>
+          </div>
+        </form>
+      </div>
+    </details>
+
+    <!-- Reject (with confirmation + reason) -->
+    <details class="confirm">
+      <summary class="btn btn-danger">&#x274c; Reject</summary>
+      <div class="confirm-box">
+        <p>&#x26a0; 确认拒绝此内容包？拒绝后不可再 Approve。</p>
+        <form method="post" action="/action/reject">
+          <input type="hidden" name="pack_dir" value="{{ state.active_pack.pack_dir }}">
+          <input type="hidden" name="confirmed" value="true">
+          <input name="reason" type="text" placeholder="拒绝原因（必填）" required style="width:100%;margin-bottom:8px;">
+          <div class="confirm-actions">
+            <button type="submit" class="btn btn-danger">确认 Reject</button>
+          </div>
+        </form>
+      </div>
+    </details>
+
+    <!-- Revise (with confirmation) -->
+    <details class="confirm">
+      <summary class="btn">&#x1f4dd; Revise</summary>
+      <div class="confirm-box">
+        <p>&#x26a0; 确认生成改稿建议？</p>
+        <form method="post" action="/action/revise">
+          <input type="hidden" name="pack_dir" value="{{ state.active_pack.pack_dir }}">
+          <input type="hidden" name="confirmed" value="true">
+          <div class="confirm-actions">
+            <button type="submit" class="btn">确认 Revise</button>
+          </div>
+        </form>
+      </div>
+    </details>
+  </div>
+  {% else %}
+  <p style="color: var(--text-dim);">
+    {% if state.active_pack and state.active_pack.status == 'published' %}
+    此 pack 已发布，不可再修改审核状态。
+    {% else %}
+    暂无活跃的发布包。请先在 §3 Build 内容包。
+    {% endif %}
+  </p>
+  {% endif %}
+</section>
+
+<!-- ═════════════════════════════════════════════════════ §5 发布面板 ══════ -->
+<section id="section-publish" class="action-publish">
+  <h2>
+    &#x00a7;5 发布面板
+    <span class="action-tag">&#x1f464; 需人工去平台发布</span>
+  </h2>
+
+  <div class="platform-warning">
+    &#x26a0; <strong>本系统不自动发布。</strong>请手动复制内容到各平台后台发布，然后回到这里记录。
+  </div>
+
+  {% if state.active_pack %}
+  <form method="post" action="/action/mark-published">
+    <div class="form-row">
+      <input type="hidden" name="pack_dir" value="{{ state.active_pack.pack_dir }}">
+      <div class="form-group">
+        <label for="mp-platform">平台</label>
+        <select id="mp-platform" name="platform" required>
+          <option value="">-- 选平台 --</option>
+          <option value="wechat">公众号 (wechat)</option>
+          <option value="xiaohongshu">小红书 (xiaohongshu)</option>
+          <option value="douyin">抖音 (douyin)</option>
+          <option value="videohao">视频号 (videohao)</option>
+          <option value="geo">GEO (geo)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="mp-url">发布 URL</label>
+        <input id="mp-url" name="url" type="url" placeholder="https://...">
+      </div>
+    </div>
+    <details class="confirm">
+      <summary class="btn btn-primary">&#x1f4cc; Mark Published</summary>
+      <div class="confirm-box">
+        <p>&#x26a0; 确认已手动发布到该平台？此操作仅记录，不会自动发布。</p>
+        <input type="hidden" name="confirmed" value="true">
+        <div class="confirm-actions">
+          <button type="submit" class="btn btn-confirm">确认 Mark Published</button>
+        </div>
+      </div>
+    </details>
+  </form>
+  {% else %}
+  <p style="color: var(--text-dim);">暂无活跃的发布包。</p>
+  {% endif %}
+
+  {% if state.published_entries %}
+  <div style="margin-top:14px;">
+    <strong>已发布记录:</strong>
+    <table style="margin-top:6px;">
+      <thead><tr><th>平台</th><th>时间</th><th>URL</th></tr></thead>
+      <tbody>
+      {% for pe in state.published_entries[:5] %}
+        <tr>
+          <td>{{ pe.platform }}</td>
+          <td>{{ pe.published_at[:10] }}</td>
+          <td><a href="{{ pe.url }}" target="_blank" rel="noopener">{{ pe.url[:50] }}{% if pe.url | length > 50 %}...{% endif %}</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</section>
+
+<!-- ═════════════════════════════════════════════════════ §6 数据录入 ══════ -->
+<section id="section-metrics" class="action-publish">
+  <h2>
+    &#x00a7;6 数据录入
+    <span class="action-tag">&#x1f464; 需人工录入</span>
+  </h2>
+
+  <form method="post" action="/action/record-metrics">
+    <div class="form-row">
+      <div class="form-group">
+        <label for="rm-repo">Repo</label>
+        <input id="rm-repo" name="repo" type="text" placeholder="owner/repo" required
+               pattern="^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$" style="width:200px;">
+      </div>
+      <div class="form-group">
+        <label for="rm-platform">平台</label>
+        <select id="rm-platform" name="platform" required>
+          <option value="">-- 选平台 --</option>
+          <option value="wechat">公众号</option>
+          <option value="xiaohongshu">小红书</option>
+          <option value="douyin">抖音</option>
+          <option value="videohao">视频号</option>
+          <option value="geo">GEO</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="rm-views">Views</label>
+        <input id="rm-views" name="views" type="number" min="0" value="0" required>
+      </div>
+      <div class="form-group">
+        <label for="rm-likes">Likes</label>
+        <input id="rm-likes" name="likes" type="number" min="0" value="0" required>
+      </div>
+      <div class="form-group">
+        <label for="rm-favorites">Favorites</label>
+        <input id="rm-favorites" name="favorites" type="number" min="0" value="0" required>
+      </div>
+      <div class="form-group">
+        <label for="rm-comments">Comments</label>
+        <input id="rm-comments" name="comments" type="number" min="0" value="0" required>
+      </div>
+      <div class="form-group">
+        <label for="rm-leads">Leads</label>
+        <input id="rm-leads" name="leads" type="number" min="0" value="0" required>
+      </div>
+    </div>
+    <details class="confirm">
+      <summary class="btn btn-primary">&#x1f4ca; Record Metrics</summary>
+      <div class="confirm-box">
+        <p>&#x26a0; 确认录入数据？仅写入本地 <code>data/state/metrics_history.json</code>。</p>
+        <input type="hidden" name="confirmed" value="true">
+        <div class="confirm-actions">
+          <button type="submit" class="btn btn-confirm">确认录入</button>
+        </div>
+      </div>
+    </details>
+  </form>
+</section>
+
+<!-- ═════════════════════════════════════════════════════ §7 复盘建议 ══════ -->
+<section id="section-insights" class="action-readonly">
+  <h2>
+    &#x00a7;7 复盘建议
+    <span class="action-tag">&#x1f4cb; 只读</span>
+  </h2>
+  {% if state.insights %}
+  <div class="insight-block">{{ state.insights | safe }}</div>
+  {% else %}
+  <p style="color: var(--text-dim);">复盘数据暂不可用。积累至少 3 条表现数据后系统会给出建议。</p>
+  {% endif %}
+</section>
+
+<p style="text-align:center; font-size:0.75rem; color:var(--text-dim); margin-top:30px;">
+  ai-github-blogger v0.1 — 本地操作台 — 不自动发布到任何外部平台
+</p>
+
+</body>
+</html>

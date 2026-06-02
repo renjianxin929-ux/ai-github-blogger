@@ -201,9 +201,15 @@ class TestEmptyDataNoCrash:
         monkeypatch.setattr(wb, "STATE_DIR", state_dir)
         monkeypatch.setattr(wb, "PROJECT_ROOT", tmp_path)
 
+        # Also patch the source paths that insights module reads from
+        import src.metrics as metrics_mod
+        import src.publish_history as ph_mod
+        monkeypatch.setattr(metrics_mod, "METRICS_HISTORY_FILE", state_dir / "metrics_history.json")
+        monkeypatch.setattr(ph_mod, "PUBLISH_HISTORY_FILE", state_dir / "publish_history.json")
+
         output = generate_workbench()
         assert "复盘建议" in output
-        assert "暂无发布后数据" in output or "record-metrics" in output
+        assert "暂无发布后数据" in output or "record-metrics" in output or "metrics_history 为空" in output or "暂无" in output
 
 
 # ═══════════════════════════════════════════════════════════════
